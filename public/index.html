@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Eris: They that the sow the wind shall reap the whirlwind</title>
+    <link rel="stylesheet" href="/styles/output.css">
+</head>
+<body class="flex h-screen m-0 font-sans">
+    <!-- Auth screen -->
+    <div id="auth-screen" class="fixed inset-0 z-20 flex items-center justify-center bg-gray-100 p-4">
+        <div class="bg-white rounded-lg shadow-md p-8 w-full max-w-sm">
+            <h1 class="text-2xl font-bold text-center mb-6">Chat App</h1>
+
+            <form id="login-form" class="space-y-4">
+                <h2 class="text-lg font-semibold">Login</h2>
+                <div>
+                    <label class="block text-sm font-medium mb-1" for="login-username">Username</label>
+                    <input id="login-username" type="text" autocomplete="username" class="w-full border border-gray-300 rounded-md p-2" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" for="login-password">Password</label>
+                    <input id="login-password" type="password" autocomplete="current-password" class="w-full border border-gray-300 rounded-md p-2" />
+                </div>
+                <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md p-2">Login</button>
+                <p class="text-sm text-center text-gray-600">No account? <button type="button" id="show-register" class="text-blue-500 hover:underline">Register</button></p>
+            </form>
+
+            <form id="register-form" class="space-y-4 hidden">
+                <h2 class="text-lg font-semibold">Register</h2>
+                <div>
+                    <label class="block text-sm font-medium mb-1" for="reg-username">Username</label>
+                    <input id="reg-username" type="text" autocomplete="username" class="w-full border border-gray-300 rounded-md p-2" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" for="reg-password">Password</label>
+                    <input id="reg-password" type="password" autocomplete="new-password" class="w-full border border-gray-300 rounded-md p-2" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" for="reg-avatar">Avatar (optional)</label>
+                    <input id="reg-avatar" type="file" accept="image/*" class="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-gray-100 file:text-gray-700 file:cursor-pointer" />
+                    <p class="text-xs text-gray-500 mt-1">JPEG, PNG, WebP, or GIF up to 2 MB</p>
+                </div>
+                <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md p-2">Create account</button>
+                <p class="text-sm text-center text-gray-600">Already have an account? <button type="button" id="show-login" class="text-blue-500 hover:underline">Login</button></p>
+            </form>
+
+            <p id="auth-error" class="text-sm text-red-500 text-center mt-4 hidden"></p>
+        </div>
+    </div>
+
+    <!-- Chat screen -->
+    <div id="chat-screen" class="flex-1 flex h-full hidden">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-60 bg-gray-900 text-white flex flex-col">
+            <div class="px-4 py-3 font-bold text-lg border-b border-gray-800"># Chat Channels</div>
+            <form id="channel-form" class="px-3 py-2 flex gap-2 border-b border-gray-800">
+                <input id="channel-name" type="text" maxlength="30" placeholder="New channel" class="flex-grow min-w-0 bg-gray-800 border border-gray-700 rounded-md px-2 py-1.5 text-sm placeholder-gray-500" />
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 rounded-md px-3 mt-0.5 h-8.5">+</button>
+            </form>
+            <ul id="channel-list" class="overflow-y-auto flex-grow p-2 space-y-1"></ul>
+            <div class="p-3 border-t border-gray-800">
+                <div class="flex items-center gap-3 mb-2">
+                    <span id="sidebar-avatar" class="flex items-center"></span>
+                    <span id="sidebar-username" class="truncate text-sm text-gray-300"></span>
+                </div>
+                <div class="flex gap-2">
+                    <button id="change-avatar-btn" class="flex-1 bg-gray-700 hover:bg-gray-600 rounded-md px-3 py-1.5 text-sm">Change</button>
+                    <button id="logout-btn" class="flex-1 bg-red-500 hover:bg-red-600 rounded-md px-3 py-1.5 text-sm">Logout</button>
+                </div>
+                <input id="change-avatar-input" type="file" accept="image/*" class="hidden" />
+            </div>
+        </aside>
+
+        <!-- Chat main area -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <header class="flex items-center justify-between px-4 py-2 bg-gray-800 text-white">
+                <span class="font-semibold text-sm"># <span id="current-channel">general</span></span>
+                <span id="channel-error" class="text-red-400 text-sm"></span>
+            </header>
+            <ul id="messages" class="flex-grow overflow-y-auto list-none m-0 p-0"></ul>
+            <form id="form" class="relative flex p-2.5 bg-gray-800">
+                <div id="emoji-picker" class="absolute bottom-full left-0 right-0 mb-2 mx-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 max-h-64 overflow-y-auto hidden">
+                    <div id="emoji-grid" class="grid grid-cols-9 gap-1"></div>
+                </div>
+                <button type="button" id="emoji-btn" title="Emoji" class="px-2.5 text-2xl bg-gray-700 hover:bg-gray-600 rounded-md mr-2 shrink-0">😀</button>
+                <input id="input" autocomplete="off" placeholder="Type a message..." class="flex-grow border-none p-2.5 rounded-md" /><button class="p-2.5 px-5 bg-blue-500 hover:bg-blue-600 text-white border-none cursor-pointer ml-2">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- This script is provided by Socket.io automatically -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const authScreen = document.getElementById('auth-screen');
+        const chatScreen = document.getElementById('chat-screen');
+        const authError = document.getElementById('auth-error');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const loginUsername = document.getElementById('login-username');
+        const loginPassword = document.getElementById('login-password');
+        const regUsername = document.getElementById('reg-username');
+        const regPassword = document.getElementById('reg-password');
+        const regAvatar = document.getElementById('reg-avatar');
+        const messages = document.getElementById('messages');
+        const form = document.getElementById('form');
+        const input = document.getElementById('input');
+        const channelList = document.getElementById('channel-list');
+        const channelForm = document.getElementById('channel-form');
+        const channelNameInput = document.getElementById('channel-name');
+        const currentChannelEl = document.getElementById('current-channel');
+        const channelError = document.getElementById('channel-error');
+        const sidebarAvatar = document.getElementById('sidebar-avatar');
+        const sidebarUsername = document.getElementById('sidebar-username');
+        const changeAvatarInput = document.getElementById('change-avatar-input');
+        const emojiBtn = document.getElementById('emoji-btn');
+        const emojiPicker = document.getElementById('emoji-picker');
+        const emojiGrid = document.getElementById('emoji-grid');
+
+        const EMOJIS = ['😀','😁','😂','🤣','😊','😍','🥰','😘','😜','🤪','😎','🤩','🥳','😏','😒','😔','😢','😭','😅','😉','🙃','🫠','🤗','🤔','🫡','🤐','😷','🤒','🤕','🥺','😳','😱','😈','🤓','😤','😴','🤤','👻','💀','👽','🤖','💩','😺','😸','🐶','🐱','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦆','🦅','🦉','🦄','🐝','🦋','🐢','🐙','🦀','🐳','🐬','🦈','🐊','🌵','🎄','🌲','🌴','🌸','🌹','🌻','🌞','🌝','🌚','⭐','🌟','💫','⚡','🔥','💥','💦','💧','🌈','☀️','⛅','❄️','🌊','🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍒','🍑','🥭','🍍','🥥','🥑','🍆','🥦','🥕','🌽','🌶️','🍄','🥔','🍞','🧀','🥚','🍳','🥞','🍔','🍟','🍕','🌭','🥪','🌮','🌯','🍜','🍣','🍤','🍦','🍩','🍪','🎂','🍰','🧁','🍫','🍬','🍭','🍺','🍻','🥂','☕','🍵','🧃','🥤','⚽','🏀','🏈','⚾','🎾','🏐','🏓','🏸','🏒','🥊','⛳','🏹','🎣','🎿','🏄','🚴','🤸','🧗','🏆','🥇','🥈','🥉','🏅','🎖️','🎯','🎮','🎲','🎰','🃏','🎭','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🎷','🎺','🎸','🪕','🎻','🎳','🏁','🚗','🚕','🚑','🚒','🚓','🚜','🏍️','🚲','✈️','🚀','🛸','🚁','⛵','🚢','🚉','🚦','🛑','💺','🗺️','🗽','🗼','🏰','🏯','🏠','💒','⛺','🏕️','🏖️','⛰️','🌋','🗻','🏔️','🎡','🎢','🎠','💡','🔦','🔑','🗝️','⚙️','🔧','🔨','🪓','🧲','🔩','📱','💻','🖥️','🖨️','⌨️','🖱️','💾','💿','📀','📷','📸','🎥','📽️','📺','📻','🎙️','⏰','⌚','📱','🔋','🧯','💊','💉','🩺','🚿','🛁','🪥','🪞','🪒','🧴','🧻','🧹','🧺','🧊','🏋️','🚴','🤼','🤽','🤾','🥌','🛹','🛼','🎱','🎯','🎳','🎰','🎲','♟️','🎴','🀄','🃏','🗒️','🗓️','📅','📆','📈','📉','📊','📋','📌','📍','📎','🖇️','📏','📐','✂️','🗃️','🗄️','🏷️','💰','💴','💵','💶','💷','💸','🪙','💳','🧾','🎁','🎀','🎊','🎉','🪅','🪆','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','🈳','✴️','❇️','✳️','💢','💥','💫','💦','💨','🕳️','💬','💭','🗯️','♨️','🔇','🔈','🔉','🔊','🔔','🔕','📣','📢','⏳','⌛','⏱️','⏲️','🕰️','🌙','☁️','⛸️','🎗️','🎟️','🎫','🎪','🤹','🎭','🗣️','👤','👥','🫂','👶','🧒','👦','👧','🧑','👨','👩','👴','👵','💂','👮','🕵️','👷']
+
+        function isEmojiOnly(text) {
+            return !/[A-Za-z0-9]/.test(text) && /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u.test(text);
+        }
+
+        function cleanUrl(url) {
+            let out = url;
+            while (true) {
+                const before = out;
+                out = out.replace(/\s+$/, '')
+                    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{1F300}-\u{1F5FF}\u2B00-\u2BFF]+$/u, '')
+                    .replace(/[.,!?;:)\]}»]+$/, '')
+                    .replace(/["'*_~`>]+$/, '')
+                    .replace(/\u2026+$/, '');
+                if (out === before) break;
+            }
+            return out;
+        }
+
+        function linkifyText(text) {
+            const fragment = document.createDocumentFragment();
+            const urlRe = /\b(?:https?:\/\/|www\.)[^\s<]+/gi;
+            let last = 0;
+            let match;
+            while ((match = urlRe.exec(text)) !== null) {
+                const url = cleanUrl(match[0]);
+                if (match.index > last) {
+                    fragment.appendChild(document.createTextNode(text.slice(last, match.index)));
+                }
+                const a = document.createElement('a');
+                a.href = url.startsWith('www.') ? 'http://' + url : url;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.className = 'text-blue-600 underline hover:text-blue-800 break-all';
+                a.textContent = url;
+                fragment.appendChild(a);
+                last = match.index + match[0].length;
+            }
+            if (last < text.length) {
+                fragment.appendChild(document.createTextNode(text.slice(last)));
+            }
+            return fragment;
+        }
+
+        let socket;
+        let currentUsername;
+        let sessionAvatar = '';
+        let currentChannel = 'general';
+        let channels = [];
+
+        const AVATAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+            }
+            return Math.abs(hash);
+        }
+
+        function initials(name) {
+            return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
+        }
+
+        function avatarColor(name) {
+            return AVATAR_COLORS[hashString(name) % AVATAR_COLORS.length];
+        }
+
+        function showError(message) {
+            authError.textContent = message;
+            authError.classList.remove('hidden');
+        }
+
+        function clearError() {
+            authError.textContent = '';
+            authError.classList.add('hidden');
+        }
+
+        function showRegister() {
+            clearError();
+            loginForm.classList.add('hidden');
+            registerForm.classList.remove('hidden');
+        }
+
+        function showLogin() {
+            clearError();
+            registerForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        }
+
+        document.getElementById('show-register').addEventListener('click', showRegister);
+        document.getElementById('show-login').addEventListener('click', showLogin);
+
+        async function authenticate(endpoint, username, password) {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Authentication failed');
+            return data;
+        }
+
+        async function register(username, password, avatarFile) {
+            const body = new FormData();
+            body.append('username', username);
+            body.append('password', password);
+            if (avatarFile) body.append('avatar', avatarFile);
+            const res = await fetch('/register', { method: 'POST', body });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Registration failed');
+            return data;
+        }
+
+        function enterChat(data) {
+            authScreen.classList.add('hidden');
+            chatScreen.classList.remove('hidden');
+            currentUsername = data.username;
+            sessionAvatar = data.avatar || '';
+            sidebarUsername.textContent = currentUsername;
+            applySidebarAvatar();
+            messages.innerHTML = '';
+            currentChannel = 'general';
+            currentChannelEl.textContent = currentChannel;
+            connectSocket();
+        }
+
+        function applySidebarAvatar() {
+            sidebarAvatar.innerHTML = '';
+            sidebarAvatar.appendChild(avatarEl(currentUsername, sessionAvatar));
+        }
+
+        function avatarEl(name, avatarUrl) {
+            const wrap = document.createElement('div');
+            wrap.className = 'w-8 h-8 rounded-full shrink-0 overflow-hidden flex items-center justify-center text-white text-xs font-semibold select-none';
+            wrap.style.backgroundColor = avatarUrl ? 'transparent' : avatarColor(name);
+            if (avatarUrl) {
+                const img = document.createElement('img');
+                img.src = avatarUrl;
+                img.alt = name + "'s avatar";
+                img.className = 'w-full h-full object-cover';
+                wrap.appendChild(img);
+            } else {
+                wrap.textContent = initials(name);
+            }
+            return wrap;
+        }
+
+        function addMessage(msg) {
+            const item = document.createElement('li');
+            item.className = 'flex items-start gap-3 py-2 px-4 border-b border-gray-100 group';
+            item.dataset.id = msg._id;
+            item.appendChild(avatarEl(msg.username || 'Unknown', msg.avatar));
+            item.appendChild(buildMessageContent(msg));
+
+            if (msg.username === currentUsername) {
+                const actions = document.createElement('span');
+                actions.className = 'hidden group-hover:flex flex-col items-center gap-1 pr-2 shrink-0';
+                actions.appendChild(messageAction('✏', 'Edit message', () => editMessage(msg)));
+                actions.appendChild(messageAction('🗑', 'Delete message', () => removeMessage(msg)));
+                item.appendChild(actions);
+            }
+
+            messages.appendChild(item);
+            scrollChatBottom();
+        }
+
+        function scrollChatBottom() {
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function buildMessageContent(msg) {
+            const body = document.createElement('div');
+            body.className = 'min-w-0 flex-1';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'block text-xs font-semibold text-gray-500';
+            nameEl.textContent = msg.username || 'Unknown';
+            const textEl = document.createElement('span');
+            textEl.className = isEmojiOnly(msg.text)
+                ? 'block text-gray-800 break-words text-4xl leading-normal'
+                : 'block text-gray-800 break-words';
+            if (isEmojiOnly(msg.text)) {
+                textEl.textContent = msg.text;
+            } else {
+                textEl.appendChild(linkifyText(msg.text));
+            }
+            body.appendChild(nameEl);
+            body.appendChild(textEl);
+            if (msg.youtube && msg.youtube.id) {
+                body.appendChild(youtubeCard(msg.youtube));
+            } else if (msg.og && (msg.og.title || msg.og.image)) {
+                body.appendChild(ogCard(msg.og));
+            }
+            return body;
+        }
+
+        function messageAction(label, title, onClick) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'p-1 rounded-md text-xs hover:bg-gray-100 text-gray-400';
+            btn.textContent = label;
+            btn.title = title;
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                onClick();
+            });
+            return btn;
+        }
+
+        async function editMessage(msg) {
+            const reply = prompt('Edit message:', msg.text);
+            if (reply === null) return;
+            const text = reply.trim();
+            if (!text || text === msg.text) return;
+            const res = await fetch('/messages/' + msg._id, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Failed to edit message');
+                return;
+            }
+            msg.text = data.text;
+        }
+
+        async function removeMessage(msg) {
+            if (!confirm('Delete this message?')) return;
+            const res = await fetch('/messages/' + msg._id, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Failed to delete message');
+            }
+        }
+
+        function ogCard(og) {
+            const link = document.createElement('a');
+            link.href = og.url || '#';
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.className = 'mt-1 block max-w-md border border-gray-200 rounded-lg overflow-hidden hover:bg-gray-50 no-underline';
+
+            if (og.image) {
+                const img = document.createElement('img');
+                img.src = og.image;
+                img.alt = '';
+                img.loading = 'lazy';
+                img.className = 'w-full max-h-40 object-cover';
+                img.addEventListener('error', () => img.remove());
+                link.appendChild(img);
+            }
+
+            const info = document.createElement('div');
+            info.className = 'p-3';
+
+            if (og.siteName) {
+                const site = document.createElement('div');
+                site.className = 'text-xs text-gray-400 font-medium';
+                site.textContent = og.siteName;
+                info.appendChild(site);
+            }
+            if (og.title) {
+                const title = document.createElement('div');
+                title.className = 'text-sm font-semibold text-gray-900 line-clamp-2';
+                title.textContent = og.title;
+                info.appendChild(title);
+            }
+            if (og.description) {
+                const desc = document.createElement('div');
+                desc.className = 'text-xs text-gray-500 line-clamp-3 mt-1';
+                desc.textContent = og.description;
+                info.appendChild(desc);
+            }
+
+            link.appendChild(info);
+            return link;
+        }
+
+        function youtubeCard(yt) {
+            const container = document.createElement('div');
+            container.className = 'mt-1 max-w-lg bg-white border border-gray-200 rounded-lg overflow-hidden no-underline';
+
+            const iframe = document.createElement('iframe');
+            iframe.width = '560';
+            iframe.height = '315';
+            iframe.src = 'https://www.youtube.com/embed/' + yt.id;
+            iframe.title = 'YouTube video player';
+            iframe.frameBorder = '0';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+            iframe.allowFullscreen = true;
+            iframe.loading = 'lazy';
+            iframe.className = 'w-full max-w-full border-0';
+            container.appendChild(iframe);
+
+            if (yt.title || yt.author) {
+                const info = document.createElement('div');
+                info.className = 'p-3 bg-white';
+                const title = document.createElement('div');
+                title.className = 'text-sm font-semibold text-gray-900 line-clamp-2';
+                title.textContent = yt.title || 'YouTube video';
+                info.appendChild(title);
+                const meta = document.createElement('div');
+                meta.className = 'text-xs text-gray-400 mt-0.5';
+                meta.textContent = '▶ YouTube' + (yt.author ? ' · ' + yt.author : '');
+                info.appendChild(meta);
+                container.appendChild(info);
+            }
+
+            return container;
+        }
+
+        function renderChannelList() {
+            channelList.innerHTML = '';
+            channels.forEach((ch) => {
+                const li = document.createElement('li');
+                li.className = 'group flex items-center';
+                const btn = document.createElement('button');
+                btn.className = 'w-0 flex-1 text-left px-3 py-2 rounded-md text-sm' +
+                    (ch.name === currentChannel ? ' bg-blue-600' : ' hover:bg-gray-800 text-gray-300');
+                btn.textContent = '# ' + ch.name;
+                btn.addEventListener('click', () => switchChannel(ch.name));
+                li.appendChild(btn);
+
+                const actions = document.createElement('span');
+                actions.className = 'hidden group-hover:flex items-center gap-1 pr-2 shrink-0';
+                actions.appendChild(createChannelAction('✏', () => renameChannel(ch)));
+                actions.appendChild(createChannelAction('🗑', () => removeChannel(ch)));
+                li.appendChild(actions);
+                channelList.appendChild(li);
+            });
+        }
+
+        function createChannelAction(label, onClick) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'p-1 rounded-md text-sm hover:bg-gray-600 text-gray-400';
+            btn.textContent = label;
+            btn.title = label === '✏' ? 'Rename channel' : 'Remove channel';
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                onClick();
+            });
+            return btn;
+        }
+
+        async function renameChannel(ch) {
+            const newName = prompt('Rename #' + ch.name + ' to:', ch.name);
+            if (!newName) return;
+            const res = await fetch('/channels/' + encodeURIComponent(ch.name), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName.trim() })
+            });
+            const data = await res.json();
+            channelError.textContent = res.ok ? '' : (data.error || 'Rename failed');
+        }
+
+        async function removeChannel(ch) {
+            if (!confirm('Remove channel #' + ch.name + '? All its messages will be deleted.')) return;
+            const res = await fetch('/channels/' + encodeURIComponent(ch.name), { method: 'DELETE' });
+            const data = await res.json();
+            channelError.textContent = res.ok ? '' : (data.error || 'Remove failed');
+        }
+
+        function switchChannel(name) {
+            if (name === currentChannel) return;
+            currentChannel = name;
+            currentChannelEl.textContent = name;
+            channelError.textContent = '';
+            messages.innerHTML = '';
+            renderChannelList();
+            if (socket && socket.connected) {
+                socket.emit('join channel', { channel: name });
+            }
+        }
+
+        function buildEmojiPicker() {
+            const seen = new Set();
+            EMOJIS.forEach((emoji) => {
+                if (seen.has(emoji)) return;
+                seen.add(emoji);
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'rounded-md hover:bg-gray-100 p-1 text-xl';
+                btn.textContent = emoji;
+                btn.title = emoji;
+                btn.addEventListener('click', () => insertEmoji(emoji));
+                emojiGrid.appendChild(btn);
+            });
+        }
+
+        function insertEmoji(emoji) {
+            const start = input.selectionStart ?? input.value.length;
+            const end = input.selectionEnd ?? input.value.length;
+            input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
+            input.focus();
+            input.selectionStart = input.selectionEnd = start + emoji.length;
+        }
+
+        function toggleEmojiPicker() {
+            emojiPicker.classList.toggle('hidden');
+        }
+
+        emojiBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleEmojiPicker();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!emojiPicker.classList.contains('hidden') &&
+                !emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+                emojiPicker.classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !emojiPicker.classList.contains('hidden')) {
+                emojiPicker.classList.add('hidden');
+            }
+        });
+
+        buildEmojiPicker();
+
+        async function fetchChannels() {
+            const res = await fetch('/channels');
+            if (!res.ok) return;
+            channels = await res.json();
+            renderChannelList();
+        }
+
+        function connectSocket() {
+            socket = io();
+
+            socket.on('connect', () => {
+                fetchChannels();
+                socket.emit('join channel', { channel: currentChannel });
+            });
+
+            socket.on('connect_error', (err) => {
+                console.error('Socket error:', err.message);
+            });
+
+            socket.on('channels updated', (updated) => {
+                channels = updated;
+                renderChannelList();
+            });
+
+            socket.on('channel renamed', (payload) => {
+                const found = channels.find((c) => c.name === payload.old);
+                if (found) found.name = payload.new;
+                renderChannelList();
+                if (currentChannel === payload.old) {
+                    switchChannel(payload.new);
+                }
+            });
+
+            socket.on('channel removed', (payload) => {
+                channels = channels.filter((c) => c.name !== payload.name);
+                renderChannelList();
+                if (currentChannel === payload.name) {
+                    switchChannel('general');
+                }
+            });
+
+            socket.on('join channel error', (err) => {
+                channelError.textContent = err;
+                currentChannel = 'general';
+                currentChannelEl.textContent = currentChannel;
+                renderChannelList();
+                socket.emit('join channel', { channel: 'general' });
+            });
+
+            socket.on('chat history', (history) => {
+                history.forEach(addMessage);
+                scrollChatBottom();
+            });
+
+            socket.on('chat message', addMessage);
+
+            socket.on('message updated', (msg) => {
+                const item = messages.querySelector('li[data-id="' + msg._id + '"]');
+                if (!item) return;
+                item.replaceChild(buildMessageContent(msg), item.querySelector('.min-w-0.flex-1'));
+            });
+
+            socket.on('message removed', (payload) => {
+                const item = messages.querySelector('li[data-id="' + payload._id + '"]');
+                if (item) item.remove();
+            });
+        }
+
+        async function refreshSession() {
+            try {
+                const res = await fetch('/me');
+                if (res.ok) {
+                    const data = await res.json();
+                    enterChat(data);
+                }
+            } catch (err) {
+                console.error('Session restore failed:', err.message);
+            }
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearError();
+            try {
+                const data = await authenticate('/login', loginUsername.value, loginPassword.value);
+                enterChat(data);
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearError();
+            try {
+                const data = await register(regUsername.value, regPassword.value, regAvatar.files[0]);
+                enterChat(data);
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        channelForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = channelNameInput.value.trim();
+            channelNameInput.value = '';
+            if (!name) return;
+            const res = await fetch('/channels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                channelError.textContent = data.error || 'Failed to create channel';
+                return;
+            }
+            channelError.textContent = '';
+            channels = await (await fetch('/channels')).json();
+            renderChannelList();
+            switchChannel(data.name);
+        });
+
+        changeAvatarInput.addEventListener('change', async () => {
+            const file = changeAvatarInput.files[0];
+            if (!file) return;
+            const body = new FormData();
+            body.append('avatar', file);
+            const res = await fetch('/upload-avatar', { method: 'POST', body });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Failed to update avatar');
+                return;
+            }
+            sessionAvatar = data.avatar;
+            applySidebarAvatar();
+        });
+
+        document.getElementById('change-avatar-btn').addEventListener('click', () => {
+            changeAvatarInput.value = '';
+            changeAvatarInput.click();
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            try {
+                await fetch('/logout', { method: 'POST' });
+            } catch (err) {
+                console.error('Logout failed:', err.message);
+            }
+            if (socket) socket.disconnect();
+            socket = null;
+            currentUsername = null;
+            sessionAvatar = '';
+            currentChannel = 'general';
+            chatScreen.classList.add('hidden');
+            authScreen.classList.remove('hidden');
+            loginForm.classList.remove('hidden');
+            registerForm.classList.add('hidden');
+        });
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (input.value && socket) {
+                socket.emit('chat message', { text: input.value, channel: currentChannel });
+                input.value = '';
+            }
+        });
+
+        refreshSession();
+    </script>
+</body>
+</html>
