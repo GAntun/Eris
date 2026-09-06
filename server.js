@@ -58,6 +58,71 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // In-memory username -> avatar cache
 const avatarCache = new Map();
+const nicknameCache = new Map();
+
+function userPayload(user) {
+    return {
+        username: user.username,
+        nickname: user.nickname || user.username,
+        avatar: user.avatar || ''
+    };
+}
+
+function channelPayload(c) {
+    return { _id: c._id, name: c.name, creator: c.creator, type: c.type };
+}
+
+// Voice-chat state: channel name -> Set of usernames, and username -> socketId
+const voiceRooms = new Map();
+const usernameSockets = new Map();
+
+function voiceParticipants(channel) {
+    return Array.from(voiceRooms.get(channel) || []).map((username) => ({
+        username,
+        nickname: nicknameCache.get(username) || username,
+        avatar: avatarCache.get(username) || ''
+    }));
+}
+
+function broadcastVoiceParticipants(channel) {
+    if (!channel) return;
+    io.to(channel).emit('voice participants', {
+        channel,
+        users: voiceParticipants(channel)
+    });
+}
+
+function leaveVoiceSocket(socket) {
+    if (!socket.currentVoice) return;
+    const room = socket.currentVoice;
+    socket.leave(room);
+    socket.currentVoice = null;
+    const members = voiceRooms.get(room);
+    if (members) {
+        members.delete(socket.username);
+        if (members.size === 0) voiceRooms.delete(room);
+    }
+    broadcastVoiceParticipants(room);
+}
+
+function relayVoiceSignal(socket, event, data) {
+    const to = String(data.to || '');
+    const targetId = usernameSockets.get(to);
+    if (!targetId) return;
+    const target = io.sockets.sockets.get(targetId);
+    if (!target) return;
+    if (socket.currentVoice !== data.channel || target.currentVoice !== data.channel) return;
+    target.emit(event, { from: socket.username, ...data });
+}
+
+function joinVoiceSocket(socket, name) {
+    leaveVoiceSocket(socket);
+    socket.currentVoice = name;
+    socket.join(name);
+    if (!voiceRooms.has(name)) voiceRooms.set(name, new Set());
+    voiceRooms.get(name).add(socket.username);
+    broadcastVoiceParticipants(name);
+}
 
 function parseSessionCookie(cookieHeader) {
     if (!cookieHeader) return null;
@@ -105,9 +170,10 @@ app.post('/register', avatarUpload.single('avatar'), async (req, res) => {
         const user = new User({ username, password, avatar });
         await user.save();
         avatarCache.set(username, avatar);
+        nicknameCache.set(username, username);
         const token = await createSessionFor(username);
         setSessionCookie(res, token);
-        res.status(201).json({ username, avatar });
+        res.status(201).json({ username, nickname: username, avatar });
     } catch (err) {
         if (req.file) fs.unlinkSync(req.file.path);
         if (err.code === 11000) {
@@ -128,9 +194,10 @@ app.post('/login', async (req, res) => {
         return res.status(401).json({ error: 'Invalid username or password' });
     }
     avatarCache.set(username, user.avatar);
+    nicknameCache.set(username, user.nickname || username);
     const token = await createSessionFor(username);
     setSessionCookie(res, token);
-    res.json({ username, avatar: user.avatar });
+    res.json(userPayload(user));
 });
 
 // Log out: invalidate the session both in the DB and the cookie
@@ -149,13 +216,13 @@ app.get('/me', async (req, res) => {
     if (!session) {
         return res.status(401).json({ error: 'Not logged in' });
     }
-    const user = await User.findOne({ username: session.username }).select('username avatar');
+    const user = await User.findOne({ username: session.username }).select('username nickname avatar');
     if (!user) {
         await Session.deleteOne({ _id: session._id });
         res.clearCookie(SESSION_COOKIE);
         return res.status(401).json({ error: 'User no longer exists' });
     }
-    res.json({ username: user.username, avatar: user.avatar || '' });
+    res.json(userPayload(user));
 });
 
 // Replace avatar for the currently logged-in user
@@ -186,6 +253,51 @@ app.post('/upload-avatar', avatarUpload.single('avatar'), async (req, res) => {
     }
 });
 
+// Update the current user's nickname
+app.patch('/profile', async (req, res) => {
+    const session = await findSession(req.headers.cookie);
+    if (!session) {
+        return res.status(401).json({ error: 'Not logged in' });
+    }
+    const nickname = String(req.body.nickname || '').trim().slice(0, 32);
+    if (!nickname) {
+        return res.status(400).json({ error: 'Nickname cannot be empty' });
+    }
+    const user = await User.findOne({ username: session.username });
+    if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+    }
+    user.nickname = nickname;
+    await user.save();
+    nicknameCache.set(user.username, nickname);
+    res.json(userPayload(user));
+});
+
+// Change the current user's password
+app.patch('/profile/password', async (req, res) => {
+    const session = await findSession(req.headers.cookie);
+    if (!session) {
+        return res.status(401).json({ error: 'Not logged in' });
+    }
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Current and new password are required' });
+    }
+    if (String(newPassword).length < 6) {
+        return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+    const user = await User.findOne({ username: session.username });
+    if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+    }
+    if (!(await user.comparePassword(String(currentPassword)))) {
+        return res.status(403).json({ error: 'Current password is incorrect' });
+    }
+    user.password = String(newPassword);
+    await user.save();
+    res.json({ ok: true });
+});
+
 // List all channels
 app.get('/channels', async (req, res) => {
     const session = await findSession(req.headers.cookie);
@@ -193,7 +305,7 @@ app.get('/channels', async (req, res) => {
         return res.status(401).json({ error: 'Not logged in' });
     }
     const channels = await Channel.find().sort({ createdAt: 1 });
-    res.json(channels.map((c) => ({ _id: c._id, name: c.name, creator: c.creator })));
+    res.json(channels.map(channelPayload));
 });
 
 // Create a new channel
@@ -203,14 +315,15 @@ app.post('/channels', async (req, res) => {
         return res.status(401).json({ error: 'Not logged in' });
     }
     const name = String(req.body.name || '').trim();
+    const type = req.body.type === 'voice' ? 'voice' : 'text';
     if (!/^[a-zA-Z0-9-_]{1,30}$/.test(name)) {
         return res.status(400).json({ error: 'Channel name must be 1-30 characters (letters, numbers, -, _)' });
     }
     try {
-        const channel = await Channel.create({ name, creator: session.username });
+        const channel = await Channel.create({ name, creator: session.username, type });
         const channels = await Channel.find().sort({ createdAt: 1 });
-        io.emit('channels updated', channels.map((c) => ({ _id: c._id, name: c.name, creator: c.creator })));
-        res.status(201).json({ _id: channel._id, name: channel.name, creator: channel.creator });
+        io.emit('channels updated', channels.map(channelPayload));
+        res.status(201).json(channelPayload(channel));
     } catch (err) {
         if (err.code === 11000) {
             return res.status(409).json({ error: 'Channel already exists' });
@@ -244,8 +357,12 @@ app.patch('/channels/:name', async (req, res) => {
         channel.name = newName;
         await channel.save();
         await Message.updateMany({ channel: oldName }, { $set: { channel: newName } });
-        io.emit('channel renamed', { old: oldName, new: newName });
-        res.json({ _id: channel._id, name: channel.name, creator: channel.creator });
+        if (voiceRooms.has(oldName)) {
+            voiceRooms.set(newName, voiceRooms.get(oldName));
+            voiceRooms.delete(oldName);
+        }
+        io.emit('channel renamed', { old: oldName, new: newName, type: channel.type });
+        res.json(channelPayload(channel));
     } catch (err) {
         if (err.code === 11000) {
             return res.status(409).json({ error: 'Channel already exists' });
@@ -270,7 +387,9 @@ app.delete('/channels/:name', async (req, res) => {
     }
     await Channel.deleteOne({ _id: channel._id });
     await Message.deleteMany({ channel: name });
+    voiceRooms.delete(name);
     io.emit('channel removed', { name });
+    io.emit('channel left voice', { channel: name });
     res.json({ ok: true });
 });
 
@@ -312,6 +431,7 @@ app.patch('/messages/:id', async (req, res) => {
         _id: message._id,
         channel: message.channel,
         username: message.username,
+        nickname: nicknameCache.get(message.username) || message.username,
         text: message.text,
         createdAt: message.createdAt,
         avatar: avatarCache.get(message.username) || '',
@@ -368,6 +488,7 @@ io.use(async (socket, next) => {
 // When a user connects to the chat
 io.on('connection', (socket) => {
     console.log(`${socket.username} connected`);
+    usernameSockets.set(socket.username, socket.id);
 
     // Send recent message history for a channel and join its room
     socket.on('join channel', async ({ channel } = {}) => {
@@ -386,6 +507,7 @@ io.on('connection', (socket) => {
                 _id: m._id,
                 channel: m.channel,
                 username: m.username,
+                nickname: nicknameCache.get(m.username) || m.username,
                 text: m.text,
                 createdAt: m.createdAt,
                 avatar: avatarCache.get(m.username) || '',
@@ -402,6 +524,7 @@ io.on('connection', (socket) => {
         const textRaw = String(text || '').trim();
         if (!textRaw) return;
         if (!socket.currentChannel || !socket.rooms.has(socket.currentChannel)) return;
+        if (socket.currentVoice) return;
         const msgText = textRaw.slice(0, 2000);
 
         // Persist the message
@@ -420,6 +543,7 @@ io.on('connection', (socket) => {
                 _id: message._id,
                 channel: message.channel,
                 username: message.username,
+                nickname: nicknameCache.get(message.username) || message.username,
                 text: message.text,
                 createdAt: message.createdAt,
                 avatar: avatarCache.get(message.username) || '',
@@ -431,7 +555,42 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Join a voice channel
+    socket.on('join voice', async ({ channel } = {}) => {
+        const name = String(channel || '').trim().slice(0, 30);
+        const ch = await Channel.findOne({ name });
+        if (!ch || ch.type !== 'voice') {
+            socket.emit('join voice error', `Voice channel "${name}" does not exist`);
+            return;
+        }
+        joinVoiceSocket(socket, ch.name);
+    });
+
+    // Leave the current voice channel
+    socket.on('leave voice', () => {
+        leaveVoiceSocket(socket);
+    });
+
+    // WebRTC signaling relays
+    socket.on('voice offer', (data = {}) => relayVoiceSignal(socket, 'voice offer', data));
+    socket.on('voice answer', (data = {}) => relayVoiceSignal(socket, 'voice answer', data));
+    socket.on('voice ice', (data = {}) => relayVoiceSignal(socket, 'voice ice', data));
+
+    // Speaking indicator broadcast to the voice room
+    socket.on('voice speaking', (data = {}) => {
+        const room = socket.currentVoice;
+        if (!room) return;
+        socket.to(room).emit('voice speaking', {
+            username: socket.username,
+            speaking: !!data.speaking
+        });
+    });
+
     socket.on('disconnect', () => {
+        leaveVoiceSocket(socket);
+        if (usernameSockets.get(socket.username) === socket.id) {
+            usernameSockets.delete(socket.username);
+        }
         console.log(`${socket.username} disconnected`);
     });
 });
@@ -439,10 +598,13 @@ io.on('connection', (socket) => {
 connectDB().then(async () => {
     // Hydrate the avatar cache with existing users
     try {
-        const users = await User.find({}, 'username avatar');
-        users.forEach((u) => avatarCache.set(u.username, u.avatar || ''));
+        const users = await User.find({}, 'username avatar nickname');
+        users.forEach((u) => {
+            avatarCache.set(u.username, u.avatar || '');
+            nicknameCache.set(u.username, u.nickname || u.username);
+        });
     } catch (err) {
-        console.error('Failed to hydrate avatar cache:', err.message);
+        console.error('Failed to hydrate user cache:', err.message);
     }
 
     // Ensure the default channel exists

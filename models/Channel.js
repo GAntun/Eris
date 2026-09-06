@@ -14,6 +14,11 @@ const channelSchema = new mongoose.Schema({
         type: String,
         default: 'system'
     },
+    type: {
+        type: String,
+        enum: ['text', 'voice'],
+        default: 'text'
+    },
     createdAt: {
         type: Date,
         default: Date.now

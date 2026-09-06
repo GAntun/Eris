@@ -15,6 +15,12 @@ const userSchema = new mongoose.Schema({
         required: true,
         minlength: 6
     },
+    nickname: {
+        type: String,
+        trim: true,
+        default: '',
+        maxlength: 32
+    },
     avatar: {
         type: String,
         default: ''
