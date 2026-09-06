@@ -1,0 +1,20 @@
+name: Self-Hosted Deploy
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted # This tells it to run ON your Pi, not GitHub's servers
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and Restart
+        run: |
+          # Because this runs directly on your Pi, 
+          # you don't need SSH! You just run local commands.
+          docker-compose up -d --build 
+          # OR
+          npm install && pm2 restart app
