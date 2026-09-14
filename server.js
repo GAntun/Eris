@@ -24,6 +24,17 @@ const ALLOWED_MIME_TYPES = new Map([
 const SESSION_COOKIE = 'session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+const BASE_PATH = '/eris';
+
+function assetUrl(p) {
+    if (!p || !p.startsWith('/')) return p || '';
+    return p.startsWith(BASE_PATH) ? p : BASE_PATH + p;
+}
+
+function avatarUrl(p) {
+    return assetUrl(p);
+}
+
 const uploadsDir = path.join(__dirname, 'public', 'uploads', 'avatars');
 fs.mkdirSync(uploadsDir, { recursive: true });
 
@@ -48,13 +59,16 @@ const avatarUpload = multer({
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, { path: BASE_PATH + '/socket.io' });
 
 app.use(express.json());
 app.use(cookieParser());
 
-// Serve the static HTML file and uploaded avatars
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve the static HTML file and uploaded avatars under the /eris path
+app.use(BASE_PATH + '/', express.static(path.join(__dirname, 'public')));
+
+// Redirect the bare root to the app under /eris/
+app.get('/', (req, res) => res.redirect(BASE_PATH + '/'));
 
 // In-memory username -> avatar cache
 const avatarCache = new Map();
@@ -64,7 +78,7 @@ function userPayload(user) {
     return {
         username: user.username,
         nickname: user.nickname || user.username,
-        avatar: user.avatar || ''
+        avatar: avatarUrl(user.avatar)
     };
 }
 
@@ -159,7 +173,7 @@ async function createSessionFor(username) {
 }
 
 // Register a new user
-app.post('/register', avatarUpload.single('avatar'), async (req, res) => {
+app.post(BASE_PATH + '/register', avatarUpload.single('avatar'), async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
         if (req.file) fs.unlinkSync(req.file.path);
@@ -169,7 +183,7 @@ app.post('/register', avatarUpload.single('avatar'), async (req, res) => {
     try {
         const user = new User({ username, password, avatar });
         await user.save();
-        avatarCache.set(username, avatar);
+        avatarCache.set(username, avatarUrl(avatar));
         nicknameCache.set(username, username);
         const token = await createSessionFor(username);
         setSessionCookie(res, token);
@@ -184,7 +198,7 @@ app.post('/register', avatarUpload.single('avatar'), async (req, res) => {
 });
 
 // Log in an existing user
-app.post('/login', async (req, res) => {
+app.post(BASE_PATH + '/login', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password are required' });
@@ -193,7 +207,7 @@ app.post('/login', async (req, res) => {
     if (!user || !(await user.comparePassword(password))) {
         return res.status(401).json({ error: 'Invalid username or password' });
     }
-    avatarCache.set(username, user.avatar);
+    avatarCache.set(username, avatarUrl(user.avatar));
     nicknameCache.set(username, user.nickname || username);
     const token = await createSessionFor(username);
     setSessionCookie(res, token);
@@ -201,7 +215,7 @@ app.post('/login', async (req, res) => {
 });
 
 // Log out: invalidate the session both in the DB and the cookie
-app.post('/logout', async (req, res) => {
+app.post(BASE_PATH + '/logout', async (req, res) => {
     const token = parseSessionCookie(req.headers.cookie);
     if (token) {
         await Session.deleteOne({ token });
@@ -211,7 +225,7 @@ app.post('/logout', async (req, res) => {
 });
 
 // Return the current logged-in user, used to restore sessions on page load
-app.get('/me', async (req, res) => {
+app.get(BASE_PATH + '/me', async (req, res) => {
     const session = await findSession(req.headers.cookie);
     if (!session) {
         return res.status(401).json({ error: 'Not logged in' });
@@ -226,7 +240,7 @@ app.get('/me', async (req, res) => {
 });
 
 // Replace avatar for the currently logged-in user
-app.post('/upload-avatar', avatarUpload.single('avatar'), async (req, res) => {
+app.post(BASE_PATH + '/upload-avatar', avatarUpload.single('avatar'), async (req, res) => {
     const session = await findSession(req.headers.cookie);
     const username = session ? session.username : null;
     if (!username) {
@@ -245,8 +259,8 @@ app.post('/upload-avatar', avatarUpload.single('avatar'), async (req, res) => {
         const avatar = `/uploads/avatars/${req.file.filename}`;
         user.avatar = avatar;
         await user.save();
-        avatarCache.set(username, avatar);
-        res.json({ avatar });
+        avatarCache.set(username, avatarUrl(avatar));
+        res.json({ avatar: avatarUrl(avatar) });
     } catch (err) {
         if (req.file) fs.unlinkSync(req.file.path);
         res.status(500).json({ error: err.message });
@@ -254,7 +268,7 @@ app.post('/upload-avatar', avatarUpload.single('avatar'), async (req, res) => {
 });
 
 // Update the current user's nickname
-app.patch('/profile', async (req, res) => {
+app.patch(BASE_PATH + '/profile', async (req, res) => {
     const session = await findSession(req.headers.cookie);
     if (!session) {
         return res.status(401).json({ error: 'Not logged in' });
@@ -274,7 +288,7 @@ app.patch('/profile', async (req, res) => {
 });
 
 // Change the current user's password
-app.patch('/profile/password', async (req, res) => {
+app.patch(BASE_PATH + '/profile/password', async (req, res) => {
     const session = await findSession(req.headers.cookie);
     if (!session) {
         return res.status(401).json({ error: 'Not logged in' });
@@ -299,7 +313,7 @@ app.patch('/profile/password', async (req, res) => {
 });
 
 // List all channels
-app.get('/channels', async (req, res) => {
+app.get(BASE_PATH + '/channels', async (req, res) => {
     const session = await findSession(req.headers.cookie);
     if (!session) {
         return res.status(401).json({ error: 'Not logged in' });
@@ -309,7 +323,7 @@ app.get('/channels', async (req, res) => {
 });
 
 // Create a new channel
-app.post('/channels', async (req, res) => {
+app.post(BASE_PATH + '/channels', async (req, res) => {
     const session = await findSession(req.headers.cookie);
     if (!session) {
         return res.status(401).json({ error: 'Not logged in' });
@@ -333,7 +347,7 @@ app.post('/channels', async (req, res) => {
 });
 
 // Rename a channel (any logged-in user)
-app.patch('/channels/:name', async (req, res) => {
+app.patch(BASE_PATH + '/channels/:name', async (req, res) => {
     const session = await findSession(req.headers.cookie);
     if (!session) {
         return res.status(401).json({ error: 'Not logged in' });
@@ -372,7 +386,7 @@ app.patch('/channels/:name', async (req, res) => {
 });
 
 // Remove a channel (any logged-in user)
-app.delete('/channels/:name', async (req, res) => {
+app.delete(BASE_PATH + '/channels/:name', async (req, res) => {
     const session = await findSession(req.headers.cookie);
     if (!session) {
         return res.status(401).json({ error: 'Not logged in' });
@@ -394,7 +408,7 @@ app.delete('/channels/:name', async (req, res) => {
 });
 
 // Edit a message (author only)
-app.patch('/messages/:id', async (req, res) => {
+app.patch(BASE_PATH + '/messages/:id', async (req, res) => {
     const session = await findSession(req.headers.cookie);
     if (!session) {
         return res.status(401).json({ error: 'Not logged in' });
@@ -443,7 +457,7 @@ app.patch('/messages/:id', async (req, res) => {
 });
 
 // Delete a message (author only)
-app.delete('/messages/:id', async (req, res) => {
+app.delete(BASE_PATH + '/messages/:id', async (req, res) => {
     const session = await findSession(req.headers.cookie);
     if (!session) {
         return res.status(401).json({ error: 'Not logged in' });
@@ -600,7 +614,7 @@ connectDB().then(async () => {
     try {
         const users = await User.find({}, 'username avatar nickname');
         users.forEach((u) => {
-            avatarCache.set(u.username, u.avatar || '');
+            avatarCache.set(u.username, avatarUrl(u.avatar));
             nicknameCache.set(u.username, u.nickname || u.username);
         });
     } catch (err) {
