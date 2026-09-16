@@ -83,7 +83,7 @@ function userPayload(user) {
 }
 
 function channelPayload(c) {
-    return { _id: c._id, name: c.name, creator: c.creator, type: c.type };
+    return { _id: c._id, name: c.name, description: c.description || '', creator: c.creator, type: c.type };
 }
 
 // Voice-chat state: channel name -> Set of usernames, and username -> socketId
@@ -104,6 +104,19 @@ function broadcastVoiceParticipants(channel) {
         channel,
         users: voiceParticipants(channel)
     });
+}
+
+// Users currently connected to the server (username -> socketId map)
+function onlineUsers() {
+    return Array.from(usernameSockets.keys()).map((username) => ({
+        username,
+        nickname: nicknameCache.get(username) || username,
+        avatar: avatarCache.get(username) || ''
+    }));
+}
+
+function broadcastOnlineUsers() {
+    io.emit('users online', onlineUsers());
 }
 
 function leaveVoiceSocket(socket) {
@@ -330,11 +343,12 @@ app.post(BASE_PATH + '/channels', async (req, res) => {
     }
     const name = String(req.body.name || '').trim();
     const type = req.body.type === 'voice' ? 'voice' : 'text';
+    const description = String(req.body.description || '').trim().slice(0, 200);
     if (!/^[a-zA-Z0-9-_]{1,30}$/.test(name)) {
         return res.status(400).json({ error: 'Channel name must be 1-30 characters (letters, numbers, -, _)' });
     }
     try {
-        const channel = await Channel.create({ name, creator: session.username, type });
+        const channel = await Channel.create({ name, creator: session.username, type, description });
         const channels = await Channel.find().sort({ createdAt: 1 });
         io.emit('channels updated', channels.map(channelPayload));
         res.status(201).json(channelPayload(channel));
@@ -383,6 +397,25 @@ app.patch(BASE_PATH + '/channels/:name', async (req, res) => {
         }
         res.status(500).json({ error: err.message });
     }
+});
+
+// Set a channel description (any logged-in user)
+app.patch(BASE_PATH + '/channels/:name/description', async (req, res) => {
+    const session = await findSession(req.headers.cookie);
+    if (!session) {
+        return res.status(401).json({ error: 'Not logged in' });
+    }
+    const name = String(req.params.name || '').trim();
+    const description = String(req.body.description || '').trim().slice(0, 200);
+    const channel = await Channel.findOne({ name });
+    if (!channel) {
+        return res.status(404).json({ error: 'Channel not found' });
+    }
+    channel.description = description;
+    await channel.save();
+    const channels = await Channel.find().sort({ createdAt: 1 });
+    io.emit('channels updated', channels.map(channelPayload));
+    res.json(channelPayload(channel));
 });
 
 // Remove a channel (any logged-in user)
@@ -503,6 +536,7 @@ io.use(async (socket, next) => {
 io.on('connection', (socket) => {
     console.log(`${socket.username} connected`);
     usernameSockets.set(socket.username, socket.id);
+    broadcastOnlineUsers();
 
     // Send recent message history for a channel and join its room
     socket.on('join channel', async ({ channel } = {}) => {
@@ -605,6 +639,7 @@ io.on('connection', (socket) => {
         if (usernameSockets.get(socket.username) === socket.id) {
             usernameSockets.delete(socket.username);
         }
+        broadcastOnlineUsers();
         console.log(`${socket.username} disconnected`);
     });
 });

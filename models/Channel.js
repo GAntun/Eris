@@ -10,6 +10,12 @@ const channelSchema = new mongoose.Schema({
         maxlength: 30,
         match: /^[a-zA-Z0-9-_]+$/
     },
+    description: {
+        type: String,
+        default: '',
+        trim: true,
+        maxlength: 200
+    },
     creator: {
         type: String,
         default: 'system'

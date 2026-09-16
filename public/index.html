@@ -3,28 +3,55 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Eris: They that the sow the wind shall reap the whirlwind</title>
+    <link rel="icon" type="image/x-icon" href="/eris/assets/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/eris/assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/eris/assets/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/eris/assets/apple-touch-icon.png">
     <link rel="stylesheet" href="/eris/styles/output.css">
     <style>
-        body.theme-dark { background-color: #0f172a; color: #e5e7eb; }
-        body.theme-dark .bg-white { background-color: #1f2937; }
-        body.theme-dark .bg-gray-50 { background-color: #374151; }
-        body.theme-dark .bg-gray-100 { background-color: #111827; }
-        body.theme-dark .hover\:bg-gray-50:hover { background-color: #374151; }
-        body.theme-dark .hover\:bg-gray-100:hover { background-color: #374151; }
-        body.theme-dark .border-gray-100 { border-color: #374151; }
-        body.theme-dark .border-gray-200 { border-color: #374151; }
-        body.theme-dark .border-gray-300 { border-color: #4b5563; }
-        body.theme-dark .text-gray-900 { color: #f9fafb; }
-        body.theme-dark .text-gray-800 { color: #e5e7eb; }
-        body.theme-dark .text-gray-700 { color: #d1d5db; }
-        body.theme-dark .text-gray-600 { color: #9ca3af; }
-        body.theme-dark .text-gray-500 { color: #9ca3af; }
-        body.theme-dark .text-gray-400 { color: #9ca3af; }
-        body.theme-dark input, body.theme-dark select {
-            background-color: #1f2937; color: #e5e7eb;
-            border-color: #4b5563 !important;
+        .chat-actions { opacity: 0; transition: opacity .15s ease; }
+        li.group:hover .chat-actions, .chat-actions:focus-within { opacity: 1; }
+        #channel-modal { position: fixed; inset: 0; z-index: 40; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.5); padding: 16px; }
+        #channel-modal:not(.hidden) { display: flex; }
+        #settings-screen { position: fixed; inset: 0; z-index: 30; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.5); padding: 16px; }
+        #settings-screen:not(.hidden) { display: flex; }
+        body.theme-dark { background-color: #2E294E; color: #FFFBFE; }
+        body.theme-dark .bg-white { background-color: #2E294E; }
+        body.theme-dark .bg-gray-50 { background-color: #7785AC; }
+        body.theme-dark .bg-gray-100 { background-color: #7785AC; }
+        body.theme-dark .hover\:bg-gray-50:hover { background-color: #67759C; }
+        body.theme-dark .hover\:bg-gray-100:hover { background-color: #67759C; }
+        body.theme-dark .bg-gray-900 { background-color: #241F3F; }
+        body.theme-dark .bg-gray-800 { background-color: #2E294E; }
+        body.theme-dark .hover\:bg-gray-800:hover { background-color: #362F58; }
+        body.theme-dark .bg-gray-700 { background-color: #7785AC; color: #FFFBFE; }
+        body.theme-dark .hover\:bg-gray-600:hover { background-color: #8A97B8; }
+        body.theme-dark .bg-blue-500 { background-color: #FE9D0B; color: #06251C !important; }
+        body.theme-dark .bg-blue-600 { background-color: #E08B09; color: #06251C !important; }
+        body.theme-dark .hover\:bg-blue-500:hover { background-color: #E08B09; color: #06251C !important; }
+        body.theme-dark .hover\:bg-blue-600:hover { background-color: #E08B09; color: #06251C !important; }
+        body.theme-dark button[class*="bg-blue"], body.theme-dark button[class*="bg-gray-7"] {
+            background-color: #FE9D0B !important; color: #06251C !important;
         }
-        body.theme-dark input::placeholder { color: #6b7280; }
+        body.theme-dark button[class*="bg-blue"]:hover, body.theme-dark button[class*="bg-gray-7"]:hover {
+            background-color: #E08B09 !important;
+        }
+        body.theme-dark button.bg-red-500 { background-color: #DC2626 !important; color: #FFFBFE !important; }
+        body.theme-dark button.bg-red-500:hover { background-color: #B91C1C !important; }
+        body.theme-dark .border-gray-100 { border-color: #3A3457; }
+        body.theme-dark .border-gray-200 { border-color: #453E63; }
+        body.theme-dark .border-gray-300 { border-color: #55506F; }
+        body.theme-dark .text-gray-900 { color: #FFFBFE; }
+        body.theme-dark .text-gray-800 { color: #FFFBFE; }
+        body.theme-dark .text-gray-700 { color: #F3EFF6; }
+        body.theme-dark .text-gray-600 { color: #E3DCEB; }
+        body.theme-dark .text-gray-500 { color: #D3CBE0; }
+        body.theme-dark .text-gray-400 { color: #C7BFD6; }
+        body.theme-dark input, body.theme-dark select {
+            background-color: #3A3457; color: #FFFBFE;
+            border-color: #55506F !important;
+        }
+        body.theme-dark input::placeholder { color: #A79FB8; }
     </style>
 </head>
 <body class="flex h-screen m-0 font-sans">
@@ -75,14 +102,9 @@
         <!-- Sidebar -->
         <aside id="sidebar" class="w-60 bg-gray-900 text-white flex flex-col">
             <div class="px-4 py-3 font-bold text-lg border-b border-gray-800"># Chat Channels</div>
-            <form id="channel-form" class="px-3 py-2 flex gap-2 border-b border-gray-800">
-                <input id="channel-name" type="text" maxlength="30" placeholder="New channel" class="flex-grow min-w-0 bg-gray-800 border border-gray-700 rounded-md px-2 py-1.5 text-sm placeholder-gray-500" />
-                <select id="channel-type" title="Channel type" class="bg-gray-800 border border-gray-700 rounded-md px-1.5 text-sm text-gray-300">
-                    <option value="text">#</option>
-                    <option value="voice">🎤</option>
-                </select>
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 rounded-md px-3 mt-0.5 h-8.5">+</button>
-            </form>
+            <div class="px-3 py-2 border-b border-gray-800">
+                <button id="channel-add-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded-md py-1.5 text-sm flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> New Channel</button>
+            </div>
             <ul id="channel-list" class="overflow-y-auto flex-grow p-2 space-y-1"></ul>
             <div class="p-3 border-t border-gray-800">
                 <div class="flex items-center gap-3 mb-2">
@@ -93,8 +115,8 @@
                     </div>
                 </div>
                 <div class="flex gap-2 mb-2">
-                    <button id="settings-btn" class="flex-1 bg-gray-700 hover:bg-gray-600 rounded-md px-3 py-1.5 text-sm">⚙ Settings</button>
-                    <button id="theme-toggle" class="w-10 bg-gray-700 hover:bg-gray-600 rounded-md text-sm">🌙</button>
+                    <button id="settings-btn" class="flex-1 bg-gray-700 hover:bg-gray-600 rounded-md px-3 py-1.5 text-sm flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Settings</button>
+                    <button id="theme-toggle" class="bg-gray-700 hover:bg-gray-600 rounded-md text-sm flex items-center justify-center shrink-0" style="width:40px;height:40px;border-radius:50%"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>
                 </div>
                 <div class="flex gap-2">
                     <button id="logout-btn" class="flex-1 bg-red-500 hover:bg-red-600 rounded-md px-3 py-1.5 text-sm">Logout</button>
@@ -105,7 +127,10 @@
         <!-- Chat main area -->
         <div class="flex-1 flex flex-col min-w-0">
             <header class="flex items-center justify-between px-4 py-2 bg-gray-800 text-white">
-                <span class="font-semibold text-sm"># <span id="current-channel">general</span></span>
+                <div class="flex items-center gap-3 min-w-0">
+                    <span class="font-semibold text-sm whitespace-nowrap"># <span id="current-channel">general</span></span>
+                    <span id="current-channel-desc" class="text-sm text-gray-400 truncate"></span>
+                </div>
                 <span id="channel-error" class="text-red-400 text-sm"></span>
             </header>
             <ul id="messages" class="flex-grow overflow-y-auto list-none m-0 p-0"></ul>
@@ -116,7 +141,7 @@
                 </div>
                 <div id="voice-users" class="flex flex-col gap-1 p-4 overflow-y-auto flex-grow"></div>
                 <div class="flex items-center justify-center gap-3 p-3 bg-gray-800">
-                    <button id="voice-mute-btn" class="bg-gray-700 hover:bg-gray-600 rounded-md px-4 py-1.5 text-sm">🔇 Mute</button>
+                    <button id="voice-mute-btn" class="bg-gray-700 hover:bg-gray-600 rounded-md px-4 py-1.5 text-sm flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="2" y1="2" x2="22" y2="22"></line></svg> Mute</button>
                     <button id="voice-leave-btn" class="bg-red-500 hover:bg-red-600 rounded-md px-4 py-1.5 text-sm">Leave</button>
                 </div>
             </div>
@@ -124,1156 +149,84 @@
                 <div id="emoji-picker" class="absolute bottom-full left-0 right-0 mb-2 mx-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 max-h-64 overflow-y-auto hidden">
                     <div id="emoji-grid" class="grid grid-cols-9 gap-1"></div>
                 </div>
-                <button type="button" id="emoji-btn" title="Emoji" class="px-2.5 text-2xl bg-gray-700 hover:bg-gray-600 rounded-md mr-2 shrink-0">😀</button>
-                <input id="input" autocomplete="off" placeholder="Type a message..." class="flex-grow border-none p-2.5 rounded-md" /><button class="p-2.5 px-5 bg-blue-500 hover:bg-blue-600 text-white border-none cursor-pointer ml-2">Send</button>
+                <button type="button" id="emoji-btn" title="Emoji" class="px-2.5 bg-gray-700 hover:bg-gray-600 rounded-md mr-2 shrink-0 flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg></button>
+                <input id="input" autocomplete="off" placeholder="Type a message..." class="flex-grow border-none p-2.5 rounded-md" /><button class="ml-2 bg-blue-500 hover:bg-blue-600 border-none cursor-pointer shrink-0 flex items-center justify-center" type="submit" style="width:40px;height:40px;border-radius:50%"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="none"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"></path></svg></button>
             </form>
         </div>
+
+        <!-- Online users sidebar -->
+        <aside id="online-sidebar" class="bg-gray-900 text-white flex flex-col border-l border-gray-800 overflow-hidden" style="width:200px; flex:0 0 200px">
+            <div class="px-4 py-3 font-bold text-lg border-b border-gray-800">Users Online</div>
+            <ul id="online-users" class="overflow-y-auto overflow-x-hidden flex-grow p-2 space-y-1 list-none m-0"></ul>
+        </aside>
     </div>
 
     <!-- Settings screen -->
-    <div id="settings-screen" class="fixed inset-0 z-30 hidden flex items-center justify-center bg-black/50 p-4">
-        <div class="bg-white rounded-lg shadow-md p-6 w-full max-w-md max-h-[92vh] overflow-y-auto">
+    <div id="settings-screen" class="hidden">
+        <div class="bg-white rounded-lg shadow-md w-full" style="max-width:448px;padding:24px;max-height:calc(92vh);overflow-y:auto">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xl font-bold text-gray-900">Settings</h2>
-                <button type="button" id="settings-close" class="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+                <button type="button" id="settings-close" class="text-gray-400 hover:text-gray-600 leading-none flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
             </div>
 
             <h3 class="text-sm font-semibold text-gray-500 mb-1">Nickname</h3>
-            <div class="flex gap-2 mb-4">
+            <div class="flex gap-2 mb-4" style="display:flex;margin-bottom:16px">
                 <input id="settings-nickname" type="text" maxlength="32" class="flex-grow border border-gray-300 rounded-md p-2" />
-                <button type="button" id="settings-nickname-save" class="bg-blue-500 hover:bg-blue-600 text-white rounded-md px-4">Save</button>
+                <button type="button" id="settings-nickname-save" class="bg-blue-500 hover:bg-blue-600 text-white rounded-md px-4" style="margin-left:8px">Save</button>
             </div>
 
             <h3 class="text-sm font-semibold text-gray-500 mb-1">Avatar</h3>
-            <div class="flex gap-2 items-center mb-4">
+            <div class="flex gap-2 items-center mb-4" style="display:flex;align-items:center;margin-bottom:16px">
                 <span id="settings-avatar-preview" class="flex items-center"></span>
                 <input id="settings-avatar-input" type="file" accept="image/*" class="flex-grow text-sm text-gray-600" />
-                <button type="button" id="settings-avatar-save" class="bg-blue-500 hover:bg-blue-600 text-white rounded-md px-4">Upload</button>
+                <button type="button" id="settings-avatar-save" class="bg-blue-500 hover:bg-blue-600 text-white rounded-md px-4" style="margin-left:8px">Upload</button>
             </div>
 
             <h3 class="text-sm font-semibold text-gray-500 mb-1">Change password</h3>
-            <div class="space-y-2 mb-4">
+            <div class="space-y-2 mb-4" style="display:flex;flex-direction:column;margin-bottom:16px">
                 <input id="settings-current-pass" type="password" placeholder="Current password" autocomplete="current-password" class="w-full border border-gray-300 rounded-md p-2" />
-                <input id="settings-new-pass" type="password" placeholder="New password (min 6 characters)" autocomplete="new-password" class="w-full border border-gray-300 rounded-md p-2" />
-                <button type="button" id="settings-pass-save" class="bg-blue-500 hover:bg-blue-600 text-white rounded-md px-4 py-1.5 w-full">Change password</button>
+                <input id="settings-new-pass" type="password" placeholder="New password (min 6 characters)" autocomplete="new-password" class="w-full border border-gray-300 rounded-md p-2" style="margin-top:8px" />
+                <button type="button" id="settings-pass-save" class="bg-blue-500 hover:bg-blue-600 text-white rounded-md px-4 py-1.5 w-full" style="margin-top:8px">Change password</button>
             </div>
 
             <h3 class="text-sm font-semibold text-gray-500 mb-1">Theme</h3>
-            <div class="flex gap-2 mb-4">
-                <button type="button" id="theme-light-btn" class="flex-1 border border-gray-300 rounded-md p-2">☀️ Light</button>
-                <button type="button" id="theme-dark-btn" class="flex-1 border border-gray-300 rounded-md p-2">🌙 Dark</button>
+            <div class="flex gap-2 mb-4" style="display:flex;margin-bottom:16px">
+                <button type="button" id="theme-light-btn" class="flex-1 border border-gray-300 rounded-md p-2 flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg> Light</button>
+                <button type="button" id="theme-dark-btn" class="flex-1 border border-gray-300 rounded-md p-2 flex items-center justify-center gap-2" style="margin-left:8px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> Dark</button>
             </div>
 
             <p id="settings-error" class="text-sm text-red-500 text-center mt-2 hidden"></p>
         </div>
     </div>
 
+    <div id="channel-modal" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/50 p-4">
+        <div class="bg-white rounded-lg shadow-md w-full" style="max-width:384px;padding:24px">
+            <h3 id="channel-modal-title" class="font-semibold text-lg mb-4">Create Channel</h3>
+            <div id="channel-modal-type-row" class="mb-3" style="margin-bottom:12px">
+                <label class="block text-sm font-medium mb-1">Type</label>
+                <select id="channel-modal-type" class="w-full border border-gray-300 rounded-md p-2">
+                    <option value="text">Text</option>
+                    <option value="voice">Voice</option>
+                </select>
+            </div>
+            <div class="mb-3" style="margin-bottom:12px">
+                <label class="block text-sm font-medium mb-1" for="channel-modal-name">Name</label>
+                <input id="channel-modal-name" type="text" maxlength="30" autocomplete="off" class="w-full border border-gray-300 rounded-md p-2" />
+            </div>
+            <div class="mb-4" style="margin-bottom:16px">
+                <label class="block text-sm font-medium mb-1" for="channel-modal-desc">Description</label>
+                <input id="channel-modal-desc" type="text" maxlength="200" autocomplete="off" class="w-full border border-gray-300 rounded-md p-2" />
+            </div>
+            <p id="channel-modal-error" class="text-sm text-red-500 text-center mb-2 hidden"></p>
+            <div class="flex gap-2" style="display:flex">
+                <button type="button" id="channel-modal-cancel-btn" class="flex-1 border border-gray-300 rounded-md p-2">Cancel</button>
+                <button type="button" id="channel-modal-save-btn" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md p-2" style="margin-left:8px">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- This script is provided by Socket.io automatically -->
     <script src="/eris/socket.io/socket.io.js"></script>
-    <script>
-        const authScreen = document.getElementById('auth-screen');
-        const chatScreen = document.getElementById('chat-screen');
-        const authError = document.getElementById('auth-error');
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
-        const loginUsername = document.getElementById('login-username');
-        const loginPassword = document.getElementById('login-password');
-        const regUsername = document.getElementById('reg-username');
-        const regPassword = document.getElementById('reg-password');
-        const regAvatar = document.getElementById('reg-avatar');
-        const messages = document.getElementById('messages');
-        const form = document.getElementById('form');
-        const input = document.getElementById('input');
-        const channelList = document.getElementById('channel-list');
-        const channelForm = document.getElementById('channel-form');
-        const channelNameInput = document.getElementById('channel-name');
-        const currentChannelEl = document.getElementById('current-channel');
-        const channelError = document.getElementById('channel-error');
-        const sidebarAvatar = document.getElementById('sidebar-avatar');
-        const sidebarUsername = document.getElementById('sidebar-username');
-        const emojiBtn = document.getElementById('emoji-btn');
-        const emojiPicker = document.getElementById('emoji-picker');
-        const emojiGrid = document.getElementById('emoji-grid');
-        const channelType = document.getElementById('channel-type');
-        const voicePanel = document.getElementById('voice-panel');
-        const voiceUsers = document.getElementById('voice-users');
-        const voiceChannelName = document.getElementById('voice-channel-name');
-        const voiceError = document.getElementById('voice-error');
-        const voiceMuteBtn = document.getElementById('voice-mute-btn');
-        const voiceLeaveBtn = document.getElementById('voice-leave-btn');
-        const settingsScreen = document.getElementById('settings-screen');
-        const settingsClose = document.getElementById('settings-close');
-        const settingsBtn = document.getElementById('settings-btn');
-        const settingsNickname = document.getElementById('settings-nickname');
-        const settingsNicknameSave = document.getElementById('settings-nickname-save');
-        const settingsAvatarPreview = document.getElementById('settings-avatar-preview');
-        const settingsAvatarInput = document.getElementById('settings-avatar-input');
-        const settingsAvatarSave = document.getElementById('settings-avatar-save');
-        const settingsCurrentPass = document.getElementById('settings-current-pass');
-        const settingsNewPass = document.getElementById('settings-new-pass');
-        const settingsPassSave = document.getElementById('settings-pass-save');
-        const settingsError = document.getElementById('settings-error');
-        const themeLightBtn = document.getElementById('theme-light-btn');
-        const themeDarkBtn = document.getElementById('theme-dark-btn');
-        const themeToggle = document.getElementById('theme-toggle');
-        const sidebarUsernameId = document.getElementById('sidebar-username-id');
-
-        const api = (path) => '/eris' + path;
-
-        const EMOJIS = ['😀','😁','😂','🤣','😊','😍','🥰','😘','😜','🤪','😎','🤩','🥳','😏','😒','😔','😢','😭','😅','😉','🙃','🫠','🤗','🤔','🫡','🤐','😷','🤒','🤕','🥺','😳','😱','😈','🤓','😤','😴','🤤','👻','💀','👽','🤖','💩','😺','😸','🐶','🐱','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦆','🦅','🦉','🦄','🐝','🦋','🐢','🐙','🦀','🐳','🐬','🦈','🐊','🌵','🎄','🌲','🌴','🌸','🌹','🌻','🌞','🌝','🌚','⭐','🌟','💫','⚡','🔥','💥','💦','💧','🌈','☀️','⛅','❄️','🌊','🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍒','🍑','🥭','🍍','🥥','🥑','🍆','🥦','🥕','🌽','🌶️','🍄','🥔','🍞','🧀','🥚','🍳','🥞','🍔','🍟','🍕','🌭','🥪','🌮','🌯','🍜','🍣','🍤','🍦','🍩','🍪','🎂','🍰','🧁','🍫','🍬','🍭','🍺','🍻','🥂','☕','🍵','🧃','🥤','⚽','🏀','🏈','⚾','🎾','🏐','🏓','🏸','🏒','🥊','⛳','🏹','🎣','🎿','🏄','🚴','🤸','🧗','🏆','🥇','🥈','🥉','🏅','🎖️','🎯','🎮','🎲','🎰','🃏','🎭','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🎷','🎺','🎸','🪕','🎻','🎳','🏁','🚗','🚕','🚑','🚒','🚓','🚜','🏍️','🚲','✈️','🚀','🛸','🚁','⛵','🚢','🚉','🚦','🛑','💺','🗺️','🗽','🗼','🏰','🏯','🏠','💒','⛺','🏕️','🏖️','⛰️','🌋','🗻','🏔️','🎡','🎢','🎠','💡','🔦','🔑','🗝️','⚙️','🔧','🔨','🪓','🧲','🔩','📱','💻','🖥️','🖨️','⌨️','🖱️','💾','💿','📀','📷','📸','🎥','📽️','📺','📻','🎙️','⏰','⌚','📱','🔋','🧯','💊','💉','🩺','🚿','🛁','🪥','🪞','🪒','🧴','🧻','🧹','🧺','🧊','🏋️','🚴','🤼','🤽','🤾','🥌','🛹','🛼','🎱','🎯','🎳','🎰','🎲','♟️','🎴','🀄','🃏','🗒️','🗓️','📅','📆','📈','📉','📊','📋','📌','📍','📎','🖇️','📏','📐','✂️','🗃️','🗄️','🏷️','💰','💴','💵','💶','💷','💸','🪙','💳','🧾','🎁','🎀','🎊','🎉','🪅','🪆','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','🈳','✴️','❇️','✳️','💢','💥','💫','💦','💨','🕳️','💬','💭','🗯️','♨️','🔇','🔈','🔉','🔊','🔔','🔕','📣','📢','⏳','⌛','⏱️','⏲️','🕰️','🌙','☁️','⛸️','🎗️','🎟️','🎫','🎪','🤹','🎭','🗣️','👤','👥','🫂','👶','🧒','👦','👧','🧑','👨','👩','👴','👵','💂','👮','🕵️','👷']
-
-        function isEmojiOnly(text) {
-            return !/[A-Za-z0-9]/.test(text) && /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u.test(text);
-        }
-
-        function cleanUrl(url) {
-            let out = url;
-            while (true) {
-                const before = out;
-                out = out.replace(/\s+$/, '')
-                    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{1F300}-\u{1F5FF}\u2B00-\u2BFF]+$/u, '')
-                    .replace(/[.,!?;:)\]}»]+$/, '')
-                    .replace(/["'*_~`>]+$/, '')
-                    .replace(/\u2026+$/, '');
-                if (out === before) break;
-            }
-            return out;
-        }
-
-        function linkifyText(text) {
-            const fragment = document.createDocumentFragment();
-            const urlRe = /\b(?:https?:\/\/|www\.)[^\s<]+/gi;
-            let last = 0;
-            let match;
-            while ((match = urlRe.exec(text)) !== null) {
-                const url = cleanUrl(match[0]);
-                if (match.index > last) {
-                    fragment.appendChild(document.createTextNode(text.slice(last, match.index)));
-                }
-                const a = document.createElement('a');
-                a.href = url.startsWith('www.') ? 'http://' + url : url;
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer';
-                a.className = 'text-blue-600 underline hover:text-blue-800 break-all';
-                a.textContent = url;
-                fragment.appendChild(a);
-                last = match.index + match[0].length;
-            }
-            if (last < text.length) {
-                fragment.appendChild(document.createTextNode(text.slice(last)));
-            }
-            return fragment;
-        }
-
-        let socket;
-        let currentUsername;
-        let selfNickname = '';
-        let sessionAvatar = '';
-        let currentChannel = 'general';
-        let channels = [];
-        let theme = localStorage.getItem('eris-theme') || 'light';
-        let voiceState = {
-            connected: false,
-            stream: null,
-            peers: new Map(),
-            participants: [],
-            speaking: new Set(),
-            muted: false,
-            byChannel: new Map()
-        };
-
-        const AVATAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
-
-        function hashString(str) {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-            }
-            return Math.abs(hash);
-        }
-
-        function initials(name) {
-            return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
-        }
-
-        function avatarColor(name) {
-            return AVATAR_COLORS[hashString(name) % AVATAR_COLORS.length];
-        }
-
-        function showError(message) {
-            authError.textContent = message;
-            authError.classList.remove('hidden');
-        }
-
-        function clearError() {
-            authError.textContent = '';
-            authError.classList.add('hidden');
-        }
-
-        function showRegister() {
-            clearError();
-            loginForm.classList.add('hidden');
-            registerForm.classList.remove('hidden');
-        }
-
-        function showLogin() {
-            clearError();
-            registerForm.classList.add('hidden');
-            loginForm.classList.remove('hidden');
-        }
-
-        document.getElementById('show-register').addEventListener('click', showRegister);
-        document.getElementById('show-login').addEventListener('click', showLogin);
-
-        async function authenticate(endpoint, username, password) {
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Authentication failed');
-            return data;
-        }
-
-        async function register(username, password, avatarFile) {
-            const body = new FormData();
-            body.append('username', username);
-            body.append('password', password);
-            if (avatarFile) body.append('avatar', avatarFile);
-            const res = await fetch(api('/register'), { method: 'POST', body });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Registration failed');
-            return data;
-        }
-
-        function enterChat(data) {
-            authScreen.classList.add('hidden');
-            chatScreen.classList.remove('hidden');
-            currentUsername = data.username;
-            selfNickname = data.nickname || data.username;
-            sessionAvatar = data.avatar || '';
-            sidebarUsername.textContent = selfNickname;
-            sidebarUsernameId.textContent = '*' + data.username;
-            applySidebarAvatar();
-            messages.innerHTML = '';
-            currentChannel = 'general';
-            currentChannelEl.textContent = currentChannel;
-            connectSocket();
-        }
-
-        function applyTheme(next) {
-            theme = next || theme;
-            localStorage.setItem('eris-theme', theme);
-            document.body.classList.toggle('theme-dark', theme === 'dark');
-            themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
-            themeLightBtn.classList.toggle('bg-blue-500', theme === 'light');
-            themeLightBtn.classList.toggle('text-white', theme === 'light');
-            themeDarkBtn.classList.toggle('bg-blue-500', theme === 'dark');
-            themeDarkBtn.classList.toggle('text-white', theme === 'dark');
-        }
-
-        function toggleTheme() {
-            applyTheme(theme === 'dark' ? 'light' : 'dark');
-        }
-
-        function applySidebarAvatar() {
-            sidebarAvatar.innerHTML = '';
-            sidebarAvatar.appendChild(avatarEl(currentUsername, sessionAvatar));
-        }
-
-        function avatarEl(name, avatarUrl, sizeClass) {
-            const wrap = document.createElement('div');
-            wrap.className = (sizeClass || 'w-8 h-8') + ' rounded-full shrink-0 overflow-hidden flex items-center justify-center text-white text-xs font-semibold select-none';
-            wrap.style.backgroundColor = avatarUrl ? 'transparent' : avatarColor(name);
-            if (avatarUrl) {
-                const img = document.createElement('img');
-                img.src = avatarUrl;
-                img.alt = name + "'s avatar";
-                img.className = 'w-full h-full object-cover';
-                wrap.appendChild(img);
-            } else {
-                wrap.textContent = initials(name);
-            }
-            return wrap;
-        }
-
-        function addMessage(msg) {
-            const item = document.createElement('li');
-            item.className = 'flex items-start gap-3 py-2 px-4 border-b border-gray-100 group';
-            item.dataset.id = msg._id;
-            item.appendChild(avatarEl(msg.username || 'Unknown', msg.avatar));
-            item.appendChild(buildMessageContent(msg));
-
-            if (msg.username === currentUsername) {
-                const actions = document.createElement('span');
-                actions.className = 'hidden group-hover:flex flex-col items-center gap-1 pr-2 shrink-0';
-                actions.appendChild(messageAction('✏', 'Edit message', () => editMessage(msg)));
-                actions.appendChild(messageAction('🗑', 'Delete message', () => removeMessage(msg)));
-                item.appendChild(actions);
-            }
-
-            messages.appendChild(item);
-            scrollChatBottom();
-        }
-
-        function scrollChatBottom() {
-            messages.scrollTop = messages.scrollHeight;
-        }
-
-        function buildMessageContent(msg) {
-            const body = document.createElement('div');
-            body.className = 'min-w-0 flex-1';
-            const nameEl = document.createElement('span');
-            nameEl.className = 'block text-xs font-semibold text-gray-500';
-            nameEl.textContent = msg.nickname || msg.username || 'Unknown';
-            const textEl = document.createElement('span');
-            textEl.className = isEmojiOnly(msg.text)
-                ? 'block text-gray-800 break-words text-4xl leading-normal'
-                : 'block text-gray-800 break-words';
-            if (isEmojiOnly(msg.text)) {
-                textEl.textContent = msg.text;
-            } else {
-                textEl.appendChild(linkifyText(msg.text));
-            }
-            body.appendChild(nameEl);
-            body.appendChild(textEl);
-            if (msg.youtube && msg.youtube.id) {
-                body.appendChild(youtubeCard(msg.youtube));
-            } else if (msg.og && (msg.og.title || msg.og.image)) {
-                body.appendChild(ogCard(msg.og));
-            }
-            return body;
-        }
-
-        function messageAction(label, title, onClick) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'p-1 rounded-md text-xs hover:bg-gray-100 text-gray-400';
-            btn.textContent = label;
-            btn.title = title;
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                onClick();
-            });
-            return btn;
-        }
-
-        async function editMessage(msg) {
-            const reply = prompt('Edit message:', msg.text);
-            if (reply === null) return;
-            const text = reply.trim();
-            if (!text || text === msg.text) return;
-            const res = await fetch(api('/messages/' + msg._id), {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text })
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                alert(data.error || 'Failed to edit message');
-                return;
-            }
-            msg.text = data.text;
-        }
-
-        async function removeMessage(msg) {
-            if (!confirm('Delete this message?')) return;
-            const res = await fetch(api('/messages/' + msg._id), { method: 'DELETE' });
-            const data = await res.json();
-            if (!res.ok) {
-                alert(data.error || 'Failed to delete message');
-            }
-        }
-
-        function ogCard(og) {
-            const link = document.createElement('a');
-            link.href = og.url || '#';
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            link.className = 'mt-1 block max-w-md border border-gray-200 rounded-lg overflow-hidden hover:bg-gray-50 no-underline';
-
-            if (og.image) {
-                const img = document.createElement('img');
-                img.src = og.image;
-                img.alt = '';
-                img.loading = 'lazy';
-                img.className = 'w-full max-h-40 object-cover';
-                img.addEventListener('error', () => img.remove());
-                link.appendChild(img);
-            }
-
-            const info = document.createElement('div');
-            info.className = 'p-3';
-
-            if (og.siteName) {
-                const site = document.createElement('div');
-                site.className = 'text-xs text-gray-400 font-medium';
-                site.textContent = og.siteName;
-                info.appendChild(site);
-            }
-            if (og.title) {
-                const title = document.createElement('div');
-                title.className = 'text-sm font-semibold text-gray-900 line-clamp-2';
-                title.textContent = og.title;
-                info.appendChild(title);
-            }
-            if (og.description) {
-                const desc = document.createElement('div');
-                desc.className = 'text-xs text-gray-500 line-clamp-3 mt-1';
-                desc.textContent = og.description;
-                info.appendChild(desc);
-            }
-
-            link.appendChild(info);
-            return link;
-        }
-
-        function youtubeCard(yt) {
-            const container = document.createElement('div');
-            container.className = 'mt-1 max-w-lg bg-white border border-gray-200 rounded-lg overflow-hidden no-underline';
-
-            const iframe = document.createElement('iframe');
-            iframe.width = '560';
-            iframe.height = '315';
-            iframe.src = 'https://www.youtube.com/embed/' + yt.id;
-            iframe.title = 'YouTube video player';
-            iframe.frameBorder = '0';
-            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-            iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-            iframe.allowFullscreen = true;
-            iframe.loading = 'lazy';
-            iframe.className = 'w-full max-w-full border-0';
-            container.appendChild(iframe);
-
-            if (yt.title || yt.author) {
-                const info = document.createElement('div');
-                info.className = 'p-3 bg-white';
-                const title = document.createElement('div');
-                title.className = 'text-sm font-semibold text-gray-900 line-clamp-2';
-                title.textContent = yt.title || 'YouTube video';
-                info.appendChild(title);
-                const meta = document.createElement('div');
-                meta.className = 'text-xs text-gray-400 mt-0.5';
-                meta.textContent = '▶ YouTube' + (yt.author ? ' · ' + yt.author : '');
-                info.appendChild(meta);
-                container.appendChild(info);
-            }
-
-            return container;
-        }
-
-        function renderChannelList() {
-            channelList.innerHTML = '';
-            voiceSublistEls.clear();
-            channels.filter((c) => c.type !== 'voice').forEach((ch) => appendChannelItem(ch, '# ' + ch.name));
-            channels.filter((c) => c.type === 'voice').forEach((ch) => {
-                appendChannelItem(ch, '🎤 ' + ch.name);
-                channelList.appendChild(voiceSublist(ch));
-            });
-        }
-
-        function voiceSublist(ch) {
-            const ul = document.createElement('ul');
-            ul.dataset.voiceChannel = ch.name;
-            ul.className = 'ml-5 space-y-0.5 my-0.5';
-            const users = voiceState.byChannel.get(ch.name) || [];
-            users.forEach((u) => {
-                const li = document.createElement('li');
-                li.className = 'flex items-center gap-2 px-3 py-0.5 text-xs text-gray-400 rounded';
-                if (ch.name === currentChannel && voiceState.connected && voiceState.speaking.has(u.username)) {
-                    li.classList.remove('text-gray-400');
-                    li.classList.add('text-green-400');
-                }
-                li.appendChild(avatarEl(u.username, u.avatar, 'w-5 h-5'));
-                const span = document.createElement('span');
-                span.className = 'truncate';
-                span.textContent = (u.nickname || u.username) + (u.username === currentUsername ? ' (you)' : '');
-                li.appendChild(span);
-                voiceSublistEls.set(ch.name + '|' + u.username, li);
-                ul.appendChild(li);
-            });
-            return ul;
-        }
-
-        function appendChannelItem(ch, label) {
-            const li = document.createElement('li');
-            li.className = 'group flex items-center';
-            const btn = document.createElement('button');
-            btn.className = 'w-0 flex-1 text-left px-3 py-2 rounded-md text-sm' +
-                (ch.name === currentChannel ? ' bg-blue-600' : ' hover:bg-gray-800 text-gray-300');
-            btn.textContent = label;
-            btn.addEventListener('click', () => switchChannel(ch.name));
-            li.appendChild(btn);
-
-            const actions = document.createElement('span');
-            actions.className = 'hidden group-hover:flex items-center gap-1 pr-2 shrink-0';
-            actions.appendChild(createChannelAction('✏', () => renameChannel(ch)));
-            actions.appendChild(createChannelAction('🗑', () => removeChannel(ch)));
-            li.appendChild(actions);
-            channelList.appendChild(li);
-        }
-
-        function createChannelAction(label, onClick) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'p-1 rounded-md text-sm hover:bg-gray-600 text-gray-400';
-            btn.textContent = label;
-            btn.title = label === '✏' ? 'Rename channel' : 'Remove channel';
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                onClick();
-            });
-            return btn;
-        }
-
-        async function renameChannel(ch) {
-            const newName = prompt('Rename #' + ch.name + ' to:', ch.name);
-            if (!newName) return;
-            const res = await fetch(api('/channels/' + encodeURIComponent(ch.name)), {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newName.trim() })
-            });
-            const data = await res.json();
-            channelError.textContent = res.ok ? '' : (data.error || 'Rename failed');
-        }
-
-        async function removeChannel(ch) {
-            if (!confirm('Remove channel #' + ch.name + '? All its messages will be deleted.')) return;
-            const res = await fetch(api('/channels/' + encodeURIComponent(ch.name)), { method: 'DELETE' });
-            const data = await res.json();
-            channelError.textContent = res.ok ? '' : (data.error || 'Remove failed');
-        }
-
-        function switchChannel(name) {
-            if (name === currentChannel) return;
-            const prev = currentChannel;
-            currentChannel = name;
-            currentChannelEl.textContent = name;
-            channelError.textContent = '';
-            if (prev !== name) voiceState.byChannel.delete(prev);
-            const ch = channels.find((c) => c.name === name);
-            if (ch && ch.type === 'voice') {
-                enterVoiceChannel(name);
-            } else {
-                enterTextChannel();
-            }
-            renderChannelList();
-        }
-
-        function enterTextChannel() {
-            voicePanel.classList.add('hidden');
-            messages.classList.remove('hidden');
-            form.classList.remove('hidden');
-            messages.innerHTML = '';
-            if (voiceState.connected) leaveVoice();
-            if (socket && socket.connected) {
-                socket.emit('join channel', { channel: currentChannel });
-            }
-        }
-
-        async function enterVoiceChannel(name) {
-            voiceUsers.innerHTML = '';
-            if (!voiceState.connected) {
-                await startVoice();
-                voiceState.connected = true;
-            }
-            voiceChannelName.textContent = name;
-            voicePanel.classList.remove('hidden');
-            messages.classList.add('hidden');
-            form.classList.add('hidden');
-            socket.emit('join voice', { channel: name });
-        }
-
-        async function startVoice() {
-            try {
-                const stream = await getMicStream();
-                voiceState.stream = stream;
-                voiceState.muted = false;
-                voiceMuteBtn.textContent = '🔇 Mute';
-                startSpeakingMonitor();
-                renderVoiceUsers();
-            } catch (err) {
-                console.warn('Microphone unavailable, joining listen-only:', err.message);
-                voiceState.stream = null;
-                voiceMuteBtn.textContent = '🔇 Mute';
-            }
-        }
-
-        function getMicStream() {
-            const timeout = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('timed out waiting for microphone')), 5000));
-            const stream = navigator.mediaDevices.getUserMedia({ audio: true });
-            return Promise.race([stream, timeout]);
-        }
-
-        function leaveVoice() {
-            voiceState.connected = false;
-            stopSpeakingMonitor();
-            closeAllPeers();
-            if (voiceState.stream) {
-                voiceState.stream.getTracks().forEach((t) => t.stop());
-                voiceState.stream = null;
-            }
-            if (socket && socket.connected) socket.emit('leave voice');
-            voiceUsers.innerHTML = '';
-            voiceError.textContent = '';
-        }
-
-        function toggleMute() {
-            voiceState.muted = !voiceState.muted;
-            if (voiceState.stream) {
-                voiceState.stream.getAudioTracks().forEach((t) => { t.enabled = !voiceState.muted; });
-            }
-            voiceMuteBtn.textContent = voiceState.muted ? '🔊 Unmute' : '🔇 Mute';
-            renderVoiceUsers();
-        }
-
-        let micCtx = null;
-        let micMonitor = null;
-        let voiceSublistEls = new Map();
-
-        function startSpeakingMonitor() {
-            if (!voiceState.stream) return;
-            const Ctx = window.AudioContext || window.webkitAudioContext;
-            micCtx = new Ctx();
-            const source = micCtx.createMediaStreamSource(voiceState.stream);
-            const analyser = micCtx.createAnalyser();
-            analyser.fftSize = 512;
-            source.connect(analyser);
-            const data = new Uint8Array(analyser.fftSize);
-            let wasSpeaking = false;
-            micMonitor = setInterval(() => {
-                analyser.getByteTimeDomainData(data);
-                let max = 0;
-                for (let i = 0; i < data.length; i++) {
-                    const v = Math.abs(data[i] - 128) / 128;
-                    if (v > max) max = v;
-                }
-                const speaking = max > 0.08;
-                if (speaking !== wasSpeaking) {
-                    wasSpeaking = speaking;
-                    socket.emit('voice speaking', { speaking });
-                }
-            }, 200);
-        }
-
-        function stopSpeakingMonitor() {
-            if (micMonitor) clearInterval(micMonitor);
-            micMonitor = null;
-            if (micCtx) { micCtx.close().catch(() => {}); micCtx = null; }
-        }
-
-        function renderVoiceUsers() {
-            voiceUsers.innerHTML = '';
-            const users = voiceState.participants || [];
-            if (users.length === 0) {
-                const p = document.createElement('div');
-                p.className = 'text-gray-500 text-sm text-center py-6';
-                p.textContent = 'No one is here yet.';
-                voiceUsers.appendChild(p);
-                return;
-            }
-            users.forEach((u) => {
-                const row = document.createElement('div');
-                row.dataset.username = u.username;
-                row.className = 'flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-900 hover:bg-gray-800' +
-                    (voiceState.speaking.has(u.username) ? ' bg-gray-700 hover:bg-gray-700' : '');
-                row.appendChild(avatarEl(u.username, u.avatar));
-                const nameEl = document.createElement('span');
-                nameEl.className = 'text-sm text-gray-200 truncate';
-                nameEl.textContent = (u.nickname || u.username) + (u.username === currentUsername ? ' (you)' : '');
-                row.appendChild(nameEl);
-                if (u.username === currentUsername && voiceState.muted) {
-                    const m = document.createElement('span');
-                    m.className = 'text-xs text-gray-400';
-                    m.textContent = '🔇 muted';
-                    row.appendChild(m);
-                }
-                if (voiceState.speaking.has(u.username) && u.username !== currentUsername) {
-                    const s = document.createElement('span');
-                    s.className = 'speaking-label text-xs text-green-400';
-                    s.textContent = '· speaking';
-                    row.appendChild(s);
-                }
-                voiceUsers.appendChild(row);
-            });
-        }
-
-        function updateVoiceSpeakingUI(username, speaking) {
-            const row = voiceUsers.querySelector('[data-username="' + username + '"]');
-            if (row) {
-                if (speaking) {
-                    row.classList.remove('hover:bg-gray-800');
-                    row.classList.add('bg-gray-700');
-                } else {
-                    row.classList.remove('bg-gray-700');
-                    row.classList.add('hover:bg-gray-800');
-                }
-                const label = row.querySelector('.speaking-label');
-                if (speaking && !label) {
-                    const s = document.createElement('span');
-                    s.className = 'speaking-label text-xs text-green-400';
-                    s.textContent = '· speaking';
-                    row.appendChild(s);
-                } else if (!speaking && label) {
-                    label.remove();
-                }
-            }
-            const sub = voiceSublistEls.get(currentChannel + '|' + username);
-            if (sub) {
-                if (speaking) {
-                    sub.classList.remove('text-gray-400');
-                    sub.classList.add('text-green-400');
-                } else {
-                    sub.classList.remove('text-green-400');
-                    sub.classList.add('text-gray-400');
-                }
-            }
-        }
-
-        const RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-
-        function getPeer(username) {
-            const existing = voiceState.peers.get(username);
-            if (existing) return existing;
-            const pc = new RTCPeerConnection(RTC_CONFIG);
-            if (voiceState.stream) {
-                voiceState.stream.getAudioTracks().forEach((t) => pc.addTrack(t, voiceState.stream));
-            }
-            const audioEl = document.createElement('audio');
-            audioEl.autoplay = true;
-            pc.ontrack = (ev) => {
-                audioEl.srcObject = ev.streams[0] || null;
-            };
-            pc.onicecandidate = (ev) => {
-                if (!ev.candidate) return;
-                socket.emit('voice ice', { to: username, candidate: ev.candidate, channel: currentChannel });
-            };
-            const entry = { pc, audioEl };
-            voiceState.peers.set(username, entry);
-            return entry;
-        }
-
-        async function connectToPeer(username) {
-            const entry = getPeer(username);
-            try {
-                const offer = await entry.pc.createOffer();
-                await entry.pc.setLocalDescription(offer);
-                socket.emit('voice offer', { to: username, sdp: entry.pc.localDescription, channel: currentChannel });
-            } catch (err) {
-                console.error('Offer failed for', username, err);
-            }
-        }
-
-        async function onVoiceOffer(data) {
-            const { from, sdp, channel } = data;
-            if (channel !== currentChannel) return;
-            const entry = getPeer(from);
-            try {
-                if (entry.pc.signalingState === 'have-local-offer') {
-                    await entry.pc.setLocalDescription({ type: 'rollback' });
-                }
-                await entry.pc.setRemoteDescription(new RTCSessionDescription(sdp));
-                if (entry.pc.signalingState === 'have-remote-offer') {
-                    const answer = await entry.pc.createAnswer();
-                    await entry.pc.setLocalDescription(answer);
-                    socket.emit('voice answer', { to: from, sdp: entry.pc.localDescription, channel });
-                }
-            } catch (err) {
-                console.error('Answer failed for', from, err);
-            }
-        }
-
-        async function onVoiceAnswer(data) {
-            const { from, sdp, channel } = data;
-            if (channel !== currentChannel) return;
-            const entry = voiceState.peers.get(from);
-            if (!entry) return;
-            try {
-                if (entry.pc.signalingState !== 'stable') {
-                    await entry.pc.setRemoteDescription(new RTCSessionDescription(sdp));
-                }
-            } catch (err) {
-                console.error('Remote description failed for', from, err);
-            }
-        }
-
-        async function onVoiceIce(data) {
-            const { from, candidate, channel } = data;
-            if (channel !== currentChannel) return;
-            const entry = voiceState.peers.get(from);
-            if (!entry) return;
-            try {
-                await entry.pc.addIceCandidate(new RTCIceCandidate(candidate));
-            } catch (err) {
-                console.error('Ice candidate failed for', from, err);
-            }
-        }
-
-        function closePeer(username) {
-            const entry = voiceState.peers.get(username);
-            if (!entry) return;
-            entry.pc.close();
-            if (entry.audioEl.srcObject) {
-                entry.audioEl.srcObject.getTracks().forEach((t) => t.stop());
-            }
-            voiceState.speaking.delete(username);
-            voiceState.peers.delete(username);
-        }
-
-        function closeAllPeers() {
-            Array.from(voiceState.peers.keys()).forEach(closePeer);
-            voiceState.participants = [];
-            voiceState.speaking.clear();
-            voiceState.byChannel.clear();
-            renderChannelList();
-        }
-
-        function handleVoiceParticipants(users) {
-            const incoming = users.map((u) => u.username);
-            voiceState.participants.map((u) => u.username)
-                .forEach((name) => {
-                    if (!incoming.includes(name)) closePeer(name);
-                });
-            incoming.forEach((name) => {
-                if (name === currentUsername) return;
-                if (!voiceState.peers.has(name)) connectToPeer(name);
-            });
-            voiceState.participants = users;
-            voiceState.connected = true;
-            if (currentChannel) voiceState.byChannel.set(currentChannel, users);
-            renderVoiceUsers();
-            renderChannelList();
-        }
-
-        function buildEmojiPicker() {
-            const seen = new Set();
-            EMOJIS.forEach((emoji) => {
-                if (seen.has(emoji)) return;
-                seen.add(emoji);
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'rounded-md hover:bg-gray-100 p-1 text-xl';
-                btn.textContent = emoji;
-                btn.title = emoji;
-                btn.addEventListener('click', () => insertEmoji(emoji));
-                emojiGrid.appendChild(btn);
-            });
-        }
-
-        function insertEmoji(emoji) {
-            const start = input.selectionStart ?? input.value.length;
-            const end = input.selectionEnd ?? input.value.length;
-            input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
-            input.focus();
-            input.selectionStart = input.selectionEnd = start + emoji.length;
-        }
-
-        function toggleEmojiPicker() {
-            emojiPicker.classList.toggle('hidden');
-        }
-
-        emojiBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleEmojiPicker();
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!emojiPicker.classList.contains('hidden') &&
-                !emojiPicker.contains(e.target) && e.target !== emojiBtn) {
-                emojiPicker.classList.add('hidden');
-            }
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !emojiPicker.classList.contains('hidden')) {
-                emojiPicker.classList.add('hidden');
-            }
-        });
-
-        buildEmojiPicker();
-
-        async function fetchChannels() {
-            const res = await fetch(api('/channels'));
-            if (!res.ok) return;
-            channels = await res.json();
-            renderChannelList();
-        }
-
-        function connectSocket() {
-            socket = io({ path: '/eris/socket.io' });
-
-            socket.on('connect', () => {
-                fetchChannels();
-                socket.emit('join channel', { channel: currentChannel });
-            });
-
-            socket.on('connect_error', (err) => {
-                console.error('Socket error:', err.message);
-            });
-
-            socket.on('channels updated', (updated) => {
-                channels = updated;
-                renderChannelList();
-            });
-
-            socket.on('channel renamed', (payload) => {
-                const found = channels.find((c) => c.name === payload.old);
-                if (found) found.name = payload.new;
-                renderChannelList();
-                if (currentChannel === payload.old) {
-                    switchChannel(payload.new);
-                }
-            });
-
-            socket.on('channel removed', (payload) => {
-                channels = channels.filter((c) => c.name !== payload.name);
-                renderChannelList();
-                if (currentChannel === payload.name) {
-                    switchChannel('general');
-                }
-            });
-
-            socket.on('join channel error', (err) => {
-                channelError.textContent = err;
-                currentChannel = 'general';
-                currentChannelEl.textContent = currentChannel;
-                renderChannelList();
-                socket.emit('join channel', { channel: 'general' });
-            });
-
-            socket.on('chat history', (history) => {
-                history.forEach(addMessage);
-                scrollChatBottom();
-            });
-
-            socket.on('chat message', addMessage);
-
-            socket.on('message updated', (msg) => {
-                const item = messages.querySelector('li[data-id="' + msg._id + '"]');
-                if (!item) return;
-                item.replaceChild(buildMessageContent(msg), item.querySelector('.min-w-0.flex-1'));
-            });
-
-            socket.on('message removed', (payload) => {
-                const item = messages.querySelector('li[data-id="' + payload._id + '"]');
-                if (item) item.remove();
-            });
-
-            socket.on('join voice error', (err) => {
-                voiceError.textContent = err;
-            });
-
-            socket.on('voice participants', (data) => {
-                if (data.channel !== currentChannel) return;
-                handleVoiceParticipants(data.users);
-            });
-
-            socket.on('voice offer', onVoiceOffer);
-            socket.on('voice answer', onVoiceAnswer);
-            socket.on('voice ice', onVoiceIce);
-
-            socket.on('voice speaking', (data) => {
-                if (data.username === currentUsername) return;
-                if (data.speaking) {
-                    voiceState.speaking.add(data.username);
-                    updateVoiceSpeakingUI(data.username, true);
-                } else {
-                    voiceState.speaking.delete(data.username);
-                    updateVoiceSpeakingUI(data.username, false);
-                }
-            });
-        }
-
-        async function refreshSession() {
-            try {
-                const res = await fetch(api('/me'));
-                if (res.ok) {
-                    const data = await res.json();
-                    enterChat(data);
-                }
-            } catch (err) {
-                console.error('Session restore failed:', err.message);
-            }
-        }
-
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            clearError();
-            try {
-                const data = await authenticate(api('/login'), loginUsername.value, loginPassword.value);
-                enterChat(data);
-            } catch (err) {
-                showError(err.message);
-            }
-        });
-
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            clearError();
-            try {
-                const data = await register(regUsername.value, regPassword.value, regAvatar.files[0]);
-                enterChat(data);
-            } catch (err) {
-                showError(err.message);
-            }
-        });
-
-        channelForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = channelNameInput.value.trim();
-            channelNameInput.value = '';
-            if (!name) return;
-            const res = await fetch(api('/channels'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, type: channelType.value })
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                channelError.textContent = data.error || 'Failed to create channel';
-                return;
-            }
-            channelError.textContent = '';
-            channels = await (await fetch(api('/channels'))).json();
-            renderChannelList();
-            switchChannel(data.name);
-        });
-
-        settingsBtn.addEventListener('click', () => {
-            settingsNickname.value = selfNickname;
-            settingsCurrentPass.value = '';
-            settingsNewPass.value = '';
-            settingsAvatarInput.value = '';
-            settingsError.classList.add('hidden');
-            settingsAvatarPreview.innerHTML = '';
-            settingsAvatarPreview.appendChild(avatarEl(currentUsername, sessionAvatar, 'w-14 h-14'));
-            settingsScreen.classList.remove('hidden');
-        });
-
-        settingsClose.addEventListener('click', () => settingsScreen.classList.add('hidden'));
-        settingsScreen.addEventListener('click', (e) => {
-            if (e.target === settingsScreen) settingsScreen.classList.add('hidden');
-        });
-
-        settingsNicknameSave.addEventListener('click', async () => {
-            const nickname = settingsNickname.value.trim().slice(0, 32);
-            if (!nickname) {
-                settingsError.textContent = 'Nickname cannot be empty';
-                settingsError.classList.remove('hidden');
-                return;
-            }
-            const res = await fetch(api('/profile'), {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nickname })
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                settingsError.textContent = data.error || 'Failed to update nickname';
-                settingsError.classList.remove('hidden');
-                return;
-            }
-            selfNickname = data.nickname;
-            sidebarUsername.textContent = selfNickname;
-            settingsError.classList.add('hidden');
-        });
-
-        settingsAvatarSave.addEventListener('click', async () => {
-            const file = settingsAvatarInput.files[0];
-            if (!file) {
-                settingsError.textContent = 'Choose an image file first';
-                settingsError.classList.remove('hidden');
-                return;
-            }
-            const body = new FormData();
-            body.append('avatar', file);
-            const res = await fetch(api('/upload-avatar'), { method: 'POST', body });
-            const data = await res.json();
-            if (!res.ok) {
-                settingsError.textContent = data.error || 'Failed to update avatar';
-                settingsError.classList.remove('hidden');
-                return;
-            }
-            sessionAvatar = data.avatar;
-            applySidebarAvatar();
-            settingsAvatarPreview.innerHTML = '';
-            settingsAvatarPreview.appendChild(avatarEl(currentUsername, sessionAvatar, 'w-14 h-14'));
-            settingsError.classList.add('hidden');
-        });
-
-        settingsPassSave.addEventListener('click', async () => {
-            const currentPassword = settingsCurrentPass.value;
-            const newPassword = settingsNewPass.value;
-            if (!currentPassword || newPassword.length < 6) {
-                settingsError.textContent = 'Enter current password and a new password of at least 6 characters';
-                settingsError.classList.remove('hidden');
-                return;
-            }
-            const res = await fetch(api('/profile/password'), {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ currentPassword, newPassword })
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                settingsError.textContent = data.error || 'Failed to change password';
-                settingsError.classList.remove('hidden');
-                return;
-            }
-            settingsCurrentPass.value = '';
-            settingsNewPass.value = '';
-            settingsError.textContent = 'Password updated';
-            settingsError.className = 'text-sm text-green-500 text-center mt-2';
-        });
-
-        themeLightBtn.addEventListener('click', () => applyTheme('light'));
-        themeDarkBtn.addEventListener('click', () => applyTheme('dark'));
-        themeToggle.addEventListener('click', toggleTheme);
-        applyTheme();
-
-        voiceMuteBtn.addEventListener('click', toggleMute);
-
-        voiceLeaveBtn.addEventListener('click', () => {
-            currentChannel = 'general';
-            currentChannelEl.textContent = 'general';
-            renderChannelList();
-            enterTextChannel();
-        });
-
-        document.getElementById('logout-btn').addEventListener('click', async () => {
-            if (voiceState.connected) leaveVoice();
-            try {
-                await fetch(api('/logout'), { method: 'POST' });
-            } catch (err) {
-                console.error('Logout failed:', err.message);
-            }
-            if (socket) socket.disconnect();
-            socket = null;
-            currentUsername = null;
-            sessionAvatar = '';
-            currentChannel = 'general';
-            voicePanel.classList.add('hidden');
-            voiceUsers.innerHTML = '';
-            messages.classList.remove('hidden');
-            form.classList.remove('hidden');
-            chatScreen.classList.add('hidden');
-            authScreen.classList.remove('hidden');
-            loginForm.classList.remove('hidden');
-            registerForm.classList.add('hidden');
-        });
-
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (input.value && socket) {
-                socket.emit('chat message', { text: input.value, channel: currentChannel });
-                input.value = '';
-            }
-        });
-
-        refreshSession();
-    </script>
+    <script src="/eris/js/app.js"></script>
 </body>
 </html>
