@@ -86,6 +86,22 @@ function channelPayload(c) {
     return { _id: c._id, name: c.name, description: c.description || '', creator: c.creator, type: c.type };
 }
 
+function messagePayload(m) {
+    return {
+        _id: m._id,
+        channel: m.channel,
+        username: m.username,
+        nickname: nicknameCache.get(m.username) || m.username,
+        text: m.text,
+        createdAt: m.createdAt,
+        avatar: avatarCache.get(m.username) || '',
+        og: m.og || null,
+        youtube: m.youtube || null,
+        replyTo: m.replyTo || null,
+        pinned: !!m.pinned
+    };
+}
+
 // Voice-chat state: channel name -> Set of usernames, and username -> socketId
 const voiceRooms = new Map();
 const usernameSockets = new Map();
@@ -440,6 +456,63 @@ app.delete(BASE_PATH + '/channels/:name', async (req, res) => {
     res.json({ ok: true });
 });
 
+// List pinned messages in a channel (any logged-in user)
+app.get(BASE_PATH + '/channels/:name/pinned', async (req, res) => {
+    const session = await findSession(req.headers.cookie);
+    if (!session) {
+        return res.status(401).json({ error: 'Not logged in' });
+    }
+    const name = String(req.params.name || '').trim();
+    const pinned = await Message.find({ channel: name, pinned: true })
+        .sort({ createdAt: -1 })
+        .limit(50);
+    res.json(pinned.map(messagePayload));
+});
+
+// Pin a message (any logged-in user)
+app.post(BASE_PATH + '/messages/:id/pin', async (req, res) => {
+    const session = await findSession(req.headers.cookie);
+    if (!session) {
+        return res.status(401).json({ error: 'Not logged in' });
+    }
+    let message;
+    try {
+        message = await Message.findById(req.params.id);
+    } catch (err) {
+        return res.status(400).json({ error: 'Invalid message id' });
+    }
+    if (!message) {
+        return res.status(404).json({ error: 'Message not found' });
+    }
+    message.pinned = true;
+    await message.save();
+    const payload = messagePayload(message);
+    io.to(message.channel).emit('message updated', payload);
+    res.json(payload);
+});
+
+// Unpin a message (any logged-in user)
+app.delete(BASE_PATH + '/messages/:id/pin', async (req, res) => {
+    const session = await findSession(req.headers.cookie);
+    if (!session) {
+        return res.status(401).json({ error: 'Not logged in' });
+    }
+    let message;
+    try {
+        message = await Message.findById(req.params.id);
+    } catch (err) {
+        return res.status(400).json({ error: 'Invalid message id' });
+    }
+    if (!message) {
+        return res.status(404).json({ error: 'Message not found' });
+    }
+    message.pinned = false;
+    await message.save();
+    const payload = messagePayload(message);
+    io.to(message.channel).emit('message updated', payload);
+    res.json(payload);
+});
+
 // Edit a message (author only)
 app.patch(BASE_PATH + '/messages/:id', async (req, res) => {
     const session = await findSession(req.headers.cookie);
@@ -474,17 +547,7 @@ app.patch(BASE_PATH + '/messages/:id', async (req, res) => {
             return res.status(500).json({ error: err.message });
         }
     }
-    const payload = {
-        _id: message._id,
-        channel: message.channel,
-        username: message.username,
-        nickname: nicknameCache.get(message.username) || message.username,
-        text: message.text,
-        createdAt: message.createdAt,
-        avatar: avatarCache.get(message.username) || '',
-        og: message.og,
-        youtube: message.youtube
-    };
+    const payload = messagePayload(message);
     io.to(message.channel).emit('message updated', payload);
     res.json(payload);
 });
@@ -551,29 +614,36 @@ io.on('connection', (socket) => {
         socket.join(ch.name);
         try {
             const history = await Message.find({ channel: ch.name }).sort({ createdAt: -1 }).limit(50);
-            socket.emit('chat history', history.reverse().map((m) => ({
-                _id: m._id,
-                channel: m.channel,
-                username: m.username,
-                nickname: nicknameCache.get(m.username) || m.username,
-                text: m.text,
-                createdAt: m.createdAt,
-                avatar: avatarCache.get(m.username) || '',
-                og: m.og,
-                youtube: m.youtube
-            })));
+            socket.emit('chat history', history.reverse().map(messagePayload));
         } catch (err) {
             console.error('Failed to load history:', err.message);
         }
     });
 
     // Listen for a 'chat message' event from a client
-    socket.on('chat message', async ({ text, channel } = {}) => {
+    socket.on('chat message', async ({ text, channel, replyToId } = {}) => {
         const textRaw = String(text || '').trim();
         if (!textRaw) return;
         if (!socket.currentChannel || !socket.rooms.has(socket.currentChannel)) return;
         if (socket.currentVoice) return;
         const msgText = textRaw.slice(0, 2000);
+
+        let replyTo = null;
+        if (replyToId) {
+            try {
+                const target = await Message.findById(String(replyToId));
+                if (target && target.channel === socket.currentChannel) {
+                    replyTo = {
+                        _id: target._id,
+                        username: target.username,
+                        nickname: nicknameCache.get(target.username) || target.username,
+                        text: target.text.slice(0, 150)
+                    };
+                }
+            } catch (err) {
+                replyTo = null;
+            }
+        }
 
         // Persist the message
         try {
@@ -584,20 +654,11 @@ io.on('connection', (socket) => {
                 username: socket.username,
                 text: msgText,
                 og: og || null,
-                youtube: youtube || null
+                youtube: youtube || null,
+                replyTo
             });
             // Send the message to everyone in the channel
-            io.to(socket.currentChannel).emit('chat message', {
-                _id: message._id,
-                channel: message.channel,
-                username: message.username,
-                nickname: nicknameCache.get(message.username) || message.username,
-                text: message.text,
-                createdAt: message.createdAt,
-                avatar: avatarCache.get(message.username) || '',
-                og: message.og,
-                youtube: message.youtube
-            });
+            io.to(socket.currentChannel).emit('chat message', messagePayload(message));
         } catch (err) {
             console.error('Failed to save message:', err.message);
         }

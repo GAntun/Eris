@@ -25,6 +25,15 @@ const messageSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.Mixed,
         default: null
     },
+    replyTo: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null
+    },
+    pinned: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
     createdAt: {
         type: Date,
         default: Date.now

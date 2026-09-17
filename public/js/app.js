@@ -53,6 +53,14 @@ const authScreen = document.getElementById('auth-screen');
         const themeToggle = document.getElementById('theme-toggle');
         const sidebarUsernameId = document.getElementById('sidebar-username-id');
         const onlineUsersEl = document.getElementById('online-users');
+        const onlineSidebar = document.getElementById('online-sidebar');
+        const onlineResizeHandle = document.getElementById('online-resize-handle');
+        const replyBanner = document.getElementById('reply-banner');
+        const replyBannerName = document.getElementById('reply-banner-name');
+        const replyBannerText = document.getElementById('reply-banner-text');
+        const replyCancel = document.getElementById('reply-cancel');
+        const pinnedBar = document.getElementById('pinned-bar');
+        const pinnedList = document.getElementById('pinned-list');
 
         const api = (path) => '/eris' + path;
 
@@ -66,7 +74,9 @@ const authScreen = document.getElementById('auth-screen');
             smile: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>',
             edit: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>',
             trash: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
-            close: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>'
+            close: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+            reply: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>',
+            pin: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"></path><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z"></path></svg>'
         };
 
         function isEmojiOnly(text) {
@@ -271,17 +281,23 @@ const authScreen = document.getElementById('auth-screen');
             time.textContent = formatTime(msg.createdAt);
             item.appendChild(time);
 
+            const actions = document.createElement('span');
+            actions.className = 'chat-actions flex flex-row items-center gap-1 rounded-md shrink-0 self-start ml-auto';
+            actions.style.backgroundColor = 'rgba(127,127,127,0.15)';
+            actions.style.padding = '2px 2px';
+            actions.style.width = '144px';
+            actions.style.minWidth = '144px';
+            actions.style.justifyContent = 'flex-end';
+            actions.appendChild(messageAction(SVG.reply, 'Reply', () => replyToMessage(msg)));
+            const pinBtn = messageAction(SVG.pin, msg.pinned ? 'Unpin message' : 'Pin message', () => togglePin(msg));
+            pinBtn.dataset.action = 'pin';
+            if (msg.pinned) pinBtn.style.color = '#FEBE5D';
+            actions.appendChild(pinBtn);
             if (msg.username === currentUsername) {
-                const actions = document.createElement('span');
-                actions.className = 'chat-actions flex flex-row items-center gap-1 rounded-md shrink-0 self-start ml-auto';
-                actions.style.backgroundColor = 'rgba(127,127,127,0.15)';
-                actions.style.padding = '2px 2px';
-                actions.style.width = '76px';
-                actions.style.minWidth = '76px';
                 actions.appendChild(messageAction(SVG.edit, 'Edit message', () => editMessage(msg)));
                 actions.appendChild(messageAction(SVG.trash, 'Delete message', () => removeMessage(msg)));
-                item.appendChild(actions);
             }
+            item.appendChild(actions);
 
             messages.appendChild(item);
             scrollChatBottom();
@@ -308,6 +324,10 @@ const authScreen = document.getElementById('auth-screen');
             const nameEl = document.createElement('span');
             nameEl.className = 'block text-xs font-semibold text-gray-500';
             nameEl.textContent = msg.nickname || msg.username || 'Unknown';
+            body.appendChild(nameEl);
+            if (msg.replyTo && msg.replyTo._id) {
+                body.appendChild(replyQuote(msg.replyTo));
+            }
             const textEl = document.createElement('span');
             textEl.style.whiteSpace = 'normal';
             textEl.style.wordBreak = 'break-word';
@@ -329,6 +349,27 @@ const authScreen = document.getElementById('auth-screen');
                 body.appendChild(ogCard(msg.og));
             }
             return body;
+        }
+
+        function replyQuote(r) {
+            const q = document.createElement('div');
+            q.style.cssText = 'border-left:2px solid #9ca3af;padding-left:8px;margin:4px 0;cursor:pointer;font-size:12px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+            const nameSp = document.createElement('span');
+            nameSp.style.fontWeight = '600';
+            nameSp.textContent = r.nickname || r.username || 'Unknown';
+            const textSp = document.createElement('span');
+            textSp.textContent = (r.text || '').length > 120
+                ? (r.text || '').slice(0, 120) + '…'
+                : (r.text || '');
+            q.appendChild(nameSp);
+            q.appendChild(document.createTextNode(': '));
+            q.appendChild(textSp);
+            q.title = 'Jump to message';
+            q.addEventListener('click', (e) => {
+                e.stopPropagation();
+                jumpToMessage(r._id);
+            });
+            return q;
         }
 
         function messageAction(icon, title, onClick) {
@@ -632,8 +673,104 @@ const authScreen = document.getElementById('auth-screen');
             channelError.textContent = res.ok ? '' : (data.error || 'Remove failed');
         }
 
+        let replyTarget = null;
+
+        function replyToMessage(msg) {
+            replyTarget = msg;
+            replyBannerName.textContent = msg.nickname || msg.username || 'Unknown';
+            replyBannerText.textContent = (msg.text || '').replace(/\s+/g, ' ').trim().slice(0, 100) || '(empty message)';
+            replyBanner.style.display = 'flex';
+            replyBanner.classList.remove('hidden');
+            input.focus();
+        }
+
+        function cancelReply() {
+            replyTarget = null;
+            replyBanner.style.display = 'none';
+            replyBanner.classList.add('hidden');
+        }
+
+        let pinnedMessages = [];
+
+        async function loadPinned() {
+            try {
+                const res = await fetch(api('/channels/' + encodeURIComponent(currentChannel) + '/pinned'));
+                if (!res.ok) {
+                    pinnedMessages = [];
+                    renderPinned();
+                    return;
+                }
+                pinnedMessages = await res.json();
+            } catch (err) {
+                pinnedMessages = [];
+            }
+            renderPinned();
+        }
+
+        function renderPinned() {
+            if (!pinnedBar || !pinnedList) return;
+            pinnedList.innerHTML = '';
+            if (!pinnedMessages.length) {
+                pinnedBar.style.display = 'none';
+                return;
+            }
+            pinnedBar.style.display = 'flex';
+            const label = document.createElement('span');
+            label.style.cssText = 'display:flex;align-items:center;gap:4px;flex-shrink:0;color:#FEBE5D;font-weight:600';
+            const iconEl = document.createElement('span');
+            iconEl.style.display = 'flex';
+            iconEl.innerHTML = SVG.pin;
+            label.appendChild(iconEl);
+            label.appendChild(document.createTextNode('Pinned'));
+            pinnedList.appendChild(label);
+            pinnedMessages.forEach((m) => {
+                const chip = document.createElement('div');
+                chip.style.cssText = 'display:flex;align-items:center;gap:6px;flex-shrink:0;background:rgba(127,127,127,0.15);border-radius:6px;padding:2px 10px;cursor:pointer;font-size:12px;color:#d1d5db;white-space:nowrap;max-width:280px;overflow:hidden';
+                const name = document.createElement('b');
+                name.textContent = m.nickname || m.username || 'Unknown';
+                name.style.color = '#e5e7eb';
+                const text = document.createElement('span');
+                text.textContent = (m.text || '').replace(/\s+/g, ' ').trim().slice(0, 100) || '(empty message)';
+                text.style.overflow = 'hidden';
+                text.style.textOverflow = 'ellipsis';
+                chip.appendChild(name);
+                chip.appendChild(document.createTextNode(': '));
+                chip.appendChild(text);
+                chip.title = 'Jump to message';
+                chip.addEventListener('click', () => jumpToMessage(m._id));
+                pinnedList.appendChild(chip);
+            });
+        }
+
+        function jumpToMessage(id) {
+            const target = messages.querySelector('[data-id="' + CSS.escape(id) + '"]');
+            if (!target) return;
+            target.scrollIntoView({ block: 'center' });
+            target.style.outline = '2px solid #FEBE5D';
+            setTimeout(() => { target.style.outline = ''; }, 1500);
+        }
+
+        async function togglePin(msg) {
+            const res = await fetch(api('/messages/' + msg._id + '/pin'), {
+                method: msg.pinned ? 'DELETE' : 'POST'
+            });
+            if (!res.ok) return;
+            const updated = await res.json();
+            msg.pinned = !!updated.pinned;
+            const item = messages.querySelector('li[data-id="' + CSS.escape(msg._id) + '"]');
+            if (item) {
+                const pinBtn = item.querySelector('button[data-action="pin"]');
+                if (pinBtn) {
+                    pinBtn.title = msg.pinned ? 'Unpin message' : 'Pin message';
+                    pinBtn.style.color = msg.pinned ? '#FEBE5D' : '';
+                }
+            }
+            await loadPinned();
+        }
+
         function switchChannel(name) {
             if (name === currentChannel) return;
+            cancelReply();
             const prev = currentChannel;
             currentChannel = name;
             updateChannelHeader();
@@ -657,6 +794,7 @@ const authScreen = document.getElementById('auth-screen');
             if (socket && socket.connected) {
                 socket.emit('join channel', { channel: currentChannel });
             }
+            loadPinned();
         }
 
         async function enterVoiceChannel(name) {
@@ -994,6 +1132,7 @@ const authScreen = document.getElementById('auth-screen');
             socket.on('connect', () => {
                 fetchChannels();
                 socket.emit('join channel', { channel: currentChannel });
+                loadPinned();
             });
 
             socket.on('users online', (users) => {
@@ -1047,6 +1186,12 @@ const authScreen = document.getElementById('auth-screen');
                 const item = messages.querySelector('li[data-id="' + msg._id + '"]');
                 if (!item) return;
                 item.replaceChild(buildMessageContent(msg), item.querySelector('.min-w-0.flex-1'));
+                const pinBtn = item.querySelector('button[data-action="pin"]');
+                if (pinBtn) {
+                    pinBtn.title = msg.pinned ? 'Unpin message' : 'Pin message';
+                    pinBtn.style.color = msg.pinned ? '#FEBE5D' : '';
+                }
+                if (msg.pinned !== undefined) loadPinned();
             });
 
             socket.on('message removed', (payload) => {
@@ -1114,6 +1259,25 @@ const authScreen = document.getElementById('auth-screen');
         });
 
         channelAddBtn.addEventListener('click', () => openChannelModal('create'));
+
+        let resizingOnline = false;
+        onlineResizeHandle.addEventListener('mousedown', (e) => {
+            resizingOnline = true;
+            e.preventDefault();
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = 'col-resize';
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!resizingOnline) return;
+            const width = Math.min(480, Math.max(120, window.innerWidth - e.clientX));
+            onlineSidebar.style.width = width + 'px';
+            onlineSidebar.style.flex = '0 0 ' + width + 'px';
+        });
+        document.addEventListener('mouseup', () => {
+            resizingOnline = false;
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+        });
 
         channelModalCancelBtn.addEventListener('click', closeChannelModal);
         channelModal.addEventListener('click', (e) => {
@@ -1253,9 +1417,16 @@ const authScreen = document.getElementById('auth-screen');
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             if (input.value && socket) {
-                socket.emit('chat message', { text: input.value, channel: currentChannel });
+                socket.emit('chat message', {
+                    text: input.value,
+                    channel: currentChannel,
+                    replyToId: replyTarget ? replyTarget._id : null
+                });
                 input.value = '';
+                cancelReply();
             }
         });
+
+        replyCancel.addEventListener('click', cancelReply);
 
         refreshSession();
