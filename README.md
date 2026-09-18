@@ -1,6 +1,6 @@
 # Eris
 
-Eris is a real-time chat application built with a modern React frontend and a robust Node.js/Express/Socket.IO backend. It features text and voice channels, message replies and pinning, link previews, YouTube embeds, avatars, themes, and a resizable users-online sidebar.
+Eris is a real-time chat application built with a modern frontend and a robust Node.js/Express/Socket.IO backend. It features text and voice channels, message replies and pinning, link previews, YouTube embeds, avatars, themes, and a resizable users-online sidebar.
 
 ## Features
 
@@ -18,7 +18,7 @@ Eris is a real-time chat application built with a modern React frontend and a ro
 
 ## Tech Stack
 
-- **Frontend**: React, Tailwind CSS 4, Lucide React
+- **Frontend**: Tailwind CSS 4
 - **Backend**: Node.js, Express 5, Socket.IO, MongoDB (Mongoose 9)
 - **Storage**: MongoDB (users, sessions, channels, messages); avatars stored on disk under `public/uploads/avatars/`
 - **Base path**: All routes are served under `/eris` (`BASE_PATH`), including the REST API, static assets, and the Socket.IO endpoint.
@@ -46,26 +46,13 @@ Eris is a real-time chat application built with a modern React frontend and a ro
 
 ### Running the Project
 
-#### 1. Start the Backend Server
+#### 1. Start the Server
 ```bash
 node server.js
 ```
 The server will start on `http://localhost:3200`.
 
-#### 2. Start the Frontend
-Since the frontend is a React application, you should run it using a development server (like Vite) and ensure it proxies requests to the backend.
-
-**Option A: Using a Vite development server (Recommended for development)**
-1. Configure your frontend build tool to proxy requests to `http://localhost:3200/eris`.
-2. Run the dev server:
-   ```bash
-   npm run dev
-   ```
-
-**Option B: Build for Production**
-1. Build the React application.
-2. Move the built assets to the `public/` directory of the server.
-3. Start the server:
+1. Start the server:
    ```bash
    node server.js
    ```
@@ -119,7 +106,7 @@ Real-time events (chat messages, message updated/removed, presence, voice signal
 ## Project Structure
 
 ```
-├── client/             # React frontend source code
+├── electron/             # Electron code
 ├── server.js           # Express app, REST API, Socket.IO wiring
 ├── db.js               # MongoDB connection
 ├── models/             # Mongoose models (User, Session, Channel, Message)
