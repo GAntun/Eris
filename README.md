@@ -52,11 +52,6 @@ node server.js
 ```
 The server will start on `http://localhost:3200`.
 
-1. Start the server:
-   ```bash
-   node server.js
-   ```
-
 ### Configuration
 
 The application uses `.env` for configuration. You can create a `.env.local` file to override these settings without changing the default `.env` file.
