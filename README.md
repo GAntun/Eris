@@ -1,27 +1,25 @@
-# Eris
+# Eris Chat Application
 
-Eris is a real-time chat application built with a modern frontend and a robust Node.js/Express/Socket.IO backend. It features text and voice channels, message replies and pinning, link previews, YouTube embeds, avatars, themes, and a resizable users-online sidebar.
+A real-time chat application built with modern web technologies.
 
 ## Features
 
-- **Real-time messaging** with Socket.IO — messages appear instantly across all connected clients.
-- **Channels** — create, rename, and remove text/voice channels, each with a short description. A `general` text channel is always present.
-- **Message replies / quotes** — reply to any message; the quoted original is shown inline and jumps to the source when clicked.
-- **Pinned messages** — pin/unpin any message; pinned messages are shown in a bar under the channel header and jump to the original message on click.
-- **Edit & delete** — messages can be edited or deleted by their author.
-- **Link previews** — OpenGraph metadata is fetched for shared links, and YouTube links are converted to embedded players.
-- **Voice channels** — join voice channels in-browser with mute control and a live participant list.
-- **Presence** — a users-online sidebar (drag its edge to resize) shows who is connected in real time.
-- **Accounts** — register/login with hashed passwords (bcrypt), persistent 7-day session cookies, avatars (JPEG/PNG/WebP/GIF, max 2 MB), and editable nicknames.
-- **Theming** — light/dark theme toggle with a custom dark palette.
-- **Emoji picker** — inline emoji picker in the composer.
+- **Real-time messaging** with Socket.IO
+- **Text and voice channels** with descriptions
+- **Message replies and pinning**
+- **Link previews** and **YouTube embeds**
+- **User accounts** with avatars, nicknames, and sessions
+- **Light/dark theme** toggle
+- **Emoji picker** in composer
+- **Presence tracking** with resizable users sidebar
+- **Message editing/deletion** by authors
 
 ## Tech Stack
 
 - **Frontend**: Tailwind CSS 4
 - **Backend**: Node.js, Express 5, Socket.IO, MongoDB (Mongoose 9)
-- **Storage**: MongoDB (users, sessions, channels, messages); avatars stored on disk under `public/uploads/avatars/`
-- **Base path**: All routes are served under `/eris` (`BASE_PATH`), including the REST API, static assets, and the Socket.IO endpoint.
+- **Storage**: MongoDB for data, disk storage for avatars
+- **Desktop**: Electron for standalone application
 
 ## Project Structure
 
@@ -29,10 +27,18 @@ Eris is a real-time chat application built with a modern frontend and a robust N
 .
 ├── server.js           # Main Express app and Socket.IO setup
 ├── db.js               # MongoDB connection
-├── models/             # Mongoose data models (User, Session, Channel, Message)
+├── models/             # Mongoose data models
+│   ├── User.js         # User accounts
+│   ├── Session.js      # Authentication sessions  
+│   ├── Channel.js      # Channels (text/voice)
+│   └── Message.js      # Chat messages
 ├── og.js               # OpenGraph link-preview extraction
 ├── youtube.js          # YouTube embed extraction
-├── public/             # Static assets and uploaded files
+├── public/             # Static assets and uploads
+│   ├── index.html      # Main HTML file
+│   ├── assets/         # Images, icons, etc.
+│   ├── js/             # JavaScript files
+│   ├── styles/         # CSS styles
 │   └── uploads/        # User avatars
 ├── electron/           # Desktop application
 │   ├── main.js         # Electron main process
@@ -41,8 +47,7 @@ Eris is a real-time chat application built with a modern frontend and a robust N
 │   └── icon.png        # Generic icon
 ├── .env                # Default environment variables
 ├── .env.local          # Local overrides (not in repo)
-├── README.md           # This documentation
-└── package.json        # Project dependencies and scripts
+└── package.json        # Dependencies and scripts
 ```
 
 ## Getting Started
@@ -60,71 +65,61 @@ Eris is a real-time chat application built with a modern frontend and a robust N
    cd eris
    ```
 
-2. Install all dependencies:
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-### Running the Project
+3. Start MongoDB server
 
-#### 1. Start the Backend Server
-```bash
-node server.js
-```
-The server will start on `http://localhost:3200`.
-
-#### 2. Build CSS (if needed)
-```bash
-npm run build:css
-```
-
-#### 3. Watch CSS for changes (for development)
-```bash
-npm run watch:css
-```
+4. Run the application:
+   ```bash
+   node server.js
+   ```
 
 ### Configuration
 
-The application uses `.env` for configuration. You can create a `.env.local` file to override these settings without changing the default `.env` file.
+Environment variables in `.env` file:
 
 | Variable       | Default                            | Description                       |
 | -------------- | ---------------------------------- | --------------------------------- |
-| `PORT`         | `3200`                             | Port the HTTP server listens on.  |
-| `MONGODB_URI`  | `mongodb://127.0.0.1:27017/eris`   | MongoDB connection string.        |
-| `BASE_PATH`    | `/eris`                            | The base path for all routes.     |
-| `SKIP_SERVER`  | `false`                            | If `true`, the Electron app will not start a new server process. |
+| `PORT`         | `3200`                             | HTTP server port                  |
+| `MONGODB_URI`  | `mongodb://127.0.0.1:27017/eris`   | MongoDB connection string         |
+| `BASE_PATH`    | `/eris`                            | Base path for all routes          |
+| `SKIP_SERVER`  | `false`                            | Skip server start in Electron     |
 
-## Desktop App (Electron)
+## Desktop Application
 
-Eris can be run as a standalone desktop application using Electron.
+Eris can run as a desktop application using Electron.
 
-### Running the Electron App
+### Running Electron App
 
-- **Standard mode**: Starts the backend server and opens the Electron window.
+- **Standard mode** (starts server):
   ```bash
   npm run electron
   ```
 
-- **Client-only mode**: Use this if you already have a server running.
+- **Client-only mode** (use existing server):
   ```bash
   SKIP_SERVER=true npm run electron
   ```
 
-### Building the Desktop App
+### Building Desktop App
 
-To build a production-ready executable:
 ```bash
 npm run build:electron
 ```
-The build output will be located in the `dist/` directory.
+
+Build output will be in `dist/` directory.
+
+## API Endpoints
 
 All endpoints are prefixed with `/eris`:
 
-- `POST /eris/register`, `POST /eris/login`, `POST /eris/logout`, `GET /eris/me`
-- `POST /eris/upload-avatar`, `PATCH /eris/profile`, `PATCH /eris/profile/password`
-- `GET /eris/channels`, `POST /eris/channels`, `PATCH /eris/channels/:name`,
-  `PATCH /eris/channels/:name/description`, `DELETE /eris/channels/:name`
-- `GET /eris/channels/:name/pinned`, `POST /eris/messages/:id/pin`, `DELETE /eris/messages/:id/pin`
-- `PATCH /eris/messages/:id`, `DELETE /eris/messages/:id`
+- **Authentication**: `POST /register`, `POST /login`, `POST /logout`, `GET /me`
+- **Profile**: `POST /upload-avatar`, `PATCH /profile`, `PATCH /profile/password`
+- **Channels**: `GET /channels`, `POST /channels`, `PATCH /channels/:name`, `DELETE /channels/:name`
+- **Messages**: `PATCH /messages/:id`, `DELETE /messages/:id`
+- **Pinning**: `GET /channels/:name/pinned`, `POST /messages/:id/pin`, `DELETE /messages/:id/pin`
 
-Real-time events (chat messages, message updated/removed, presence, voice signaling) are exchanged over Socket.IO at `/eris/socket.io`.
+Real-time events via Socket.IO at `/eris/socket.io`.
