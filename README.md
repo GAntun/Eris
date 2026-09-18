@@ -23,13 +23,34 @@ Eris is a real-time chat application built with a modern frontend and a robust N
 - **Storage**: MongoDB (users, sessions, channels, messages); avatars stored on disk under `public/uploads/avatars/`
 - **Base path**: All routes are served under `/eris` (`BASE_PATH`), including the REST API, static assets, and the Socket.IO endpoint.
 
+## Project Structure
+
+```
+.
+├── server.js           # Main Express app and Socket.IO setup
+├── db.js               # MongoDB connection
+├── models/             # Mongoose data models (User, Session, Channel, Message)
+├── og.js               # OpenGraph link-preview extraction
+├── youtube.js          # YouTube embed extraction
+├── public/             # Static assets and uploaded files
+│   └── uploads/        # User avatars
+├── electron/           # Desktop application
+│   ├── main.js         # Electron main process
+│   ├── preload.js      # Security preload script
+│   ├── icon.ico        # Windows icon
+│   └── icon.png        # Generic icon
+├── .env                # Default environment variables
+├── .env.local          # Local overrides (not in repo)
+├── README.md           # This documentation
+└── package.json        # Project dependencies and scripts
+```
+
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18 or newer
 - MongoDB running locally (default URI: `mongodb://127.0.0.1:27017/eris`)
-- A build tool for the frontend (e.g., Vite)
 
 ### Installation
 
@@ -46,11 +67,21 @@ Eris is a real-time chat application built with a modern frontend and a robust N
 
 ### Running the Project
 
-#### 1. Start the Server
+#### 1. Start the Backend Server
 ```bash
 node server.js
 ```
 The server will start on `http://localhost:3200`.
+
+#### 2. Build CSS (if needed)
+```bash
+npm run build:css
+```
+
+#### 3. Watch CSS for changes (for development)
+```bash
+npm run watch:css
+```
 
 ### Configuration
 
@@ -97,17 +128,3 @@ All endpoints are prefixed with `/eris`:
 - `PATCH /eris/messages/:id`, `DELETE /eris/messages/:id`
 
 Real-time events (chat messages, message updated/removed, presence, voice signaling) are exchanged over Socket.IO at `/eris/socket.io`.
-
-## Project Structure
-
-```
-├── electron/             # Electron code
-├── server.js           # Express app, REST API, Socket.IO wiring
-├── db.js               # MongoDB connection
-├── models/             # Mongoose models (User, Session, Channel, Message)
-├── og.js               # OpenGraph link-preview extraction
-├── youtube.js          # YouTube embed extraction
-├── public/             # Static assets and uploaded files
-│   └── uploads/        # User avatars
-└── package.json        # Project dependencies and scripts
-```
