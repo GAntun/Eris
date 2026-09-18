@@ -13,6 +13,7 @@ const Session = require('./models/Session');
 const Channel = require('./models/Channel');
 const { extractLinkPreview } = require('./og');
 const { extractYoutube } = require('./youtube');
+const config = require('./config');
 
 const ALLOWED_MIME_TYPES = new Map([
     ['image/jpeg', '.jpg'],
@@ -24,7 +25,7 @@ const ALLOWED_MIME_TYPES = new Map([
 const SESSION_COOKIE = 'session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-const BASE_PATH = '/eris';
+const BASE_PATH = config.basePath;
 
 function assetUrl(p) {
     if (!p || !p.startsWith('/')) return p || '';
@@ -627,7 +628,6 @@ io.on('connection', (socket) => {
         if (!socket.currentChannel || !socket.rooms.has(socket.currentChannel)) return;
         if (socket.currentVoice) return;
         const msgText = textRaw.slice(0, 2000);
-
         let replyTo = null;
         if (replyToId) {
             try {
@@ -705,31 +705,44 @@ io.on('connection', (socket) => {
     });
 });
 
-connectDB().then(async () => {
-    // Hydrate the avatar cache with existing users
-    try {
-        const users = await User.find({}, 'username avatar nickname');
-        users.forEach((u) => {
-            avatarCache.set(u.username, avatarUrl(u.avatar));
-            nicknameCache.set(u.username, u.nickname || u.username);
-        });
-    } catch (err) {
-        console.error('Failed to hydrate user cache:', err.message);
-    }
-
-    // Ensure the default channel exists
-    try {
-        await Channel.findOneAndUpdate(
-            { name: 'general' },
-            { $setOnInsert: { name: 'general', creator: 'system' } },
-            { upsert: true }
-        );
-    } catch (err) {
-        console.error('Failed to seed general channel:', err.message);
-    }
-
-    const PORT = 3200;
-    server.listen(PORT, () => {
-        console.log(`Server running on http://localhost:${PORT}`);
+async function startServer(port = config.port) {
+  await connectDB();
+  // Hydrate the avatar cache with existing users
+  try {
+    const users = await User.find({}, 'username avatar nickname');
+    users.forEach((u) => {
+      avatarCache.set(u.username, avatarUrl(u.avatar));
+      nicknameCache.set(u.username, u.nickname || u.username);
     });
-});
+  } catch (err) {
+    console.error('Failed to hydrate user cache:', err.message);
+  }
+
+  // Ensure the default channel exists
+  try {
+    await Channel.findOneAndUpdate(
+      { name: 'general' },
+      { $setOnInsert: { name: 'general', creator: 'system' } },
+      { upsert: true }
+    );
+  } catch (err) {
+    console.error('Failed to seed general channel:', err.message);
+  }
+
+  return new Promise((resolve) => {
+    server.listen(port, () => {
+      console.log(`Server running on http://localhost:${port}`);
+      resolve();
+    });
+  });
+}
+
+
+if (require.main === module) {
+  startServer().catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+
+module.exports = { app, server, startServer };

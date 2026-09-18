@@ -1,12 +1,19 @@
 {
+  "name": "eris",
+  "version": "1.0.0",
+  "description": "Eris chat application",
+  "main": "electron/main.js",
   "scripts": {
     "build:css": "tailwindcss -i ./public/styles/input.css -o ./public/styles/output.css",
-    "watch:css": "tailwindcss -i ./public/styles/input.css -o ./public/styles/output.css --watch"
+    "watch:css": "tailwindcss -i ./public/styles/input.css -o ./public/styles/output.css --watch",
+    "electron": "electron .",
+    "build:electron": "electron-builder"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cheerio": "^1.2.0",
     "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
     "express": "^5.2.1",
     "http": "^0.0.1-security",
     "mongoose": "^9.9.4",
@@ -15,6 +22,30 @@
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",
-    "@tailwindcss/postcss": "^4.3.3"
+    "@tailwindcss/postcss": "^4.3.3",
+    "electron": "^44.4.1",
+    "electron-builder": "^26.15.3",
+    "electron-is-dev": "^3.0.1"
+  },
+  "build": {
+    "appId": "com.eris.app",
+    "productName": "Eris",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules",
+      "!dist"
+    ],
+    "extraResources": [
+      "server.js",
+      "db.js",
+      "og.js",
+      "youtube.js",
+      "models/*",
+      "public/*",
+      "config.js"
+    ]
   }
 }
