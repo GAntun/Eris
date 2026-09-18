@@ -72,14 +72,38 @@ Since the frontend is a React application, you should run it using a development
 
 ### Configuration
 
-The server reads the following environment variables (optional):
+The application uses `.env` for configuration. You can create a `.env.local` file to override these settings without changing the default `.env` file.
 
 | Variable       | Default                            | Description                       |
 | -------------- | ---------------------------------- | --------------------------------- |
 | `PORT`         | `3200`                             | Port the HTTP server listens on.  |
 | `MONGODB_URI`  | `mongodb://127.0.0.1:27017/eris`   | MongoDB connection string.        |
+| `BASE_PATH`    | `/eris`                            | The base path for all routes.     |
+| `SKIP_SERVER`  | `false`                            | If `true`, the Electron app will not start a new server process. |
 
-## API Overview
+## Desktop App (Electron)
+
+Eris can be run as a standalone desktop application using Electron.
+
+### Running the Electron App
+
+- **Standard mode**: Starts the backend server and opens the Electron window.
+  ```bash
+  npm run electron
+  ```
+
+- **Client-only mode**: Use this if you already have a server running.
+  ```bash
+  SKIP_SERVER=true npm run electron
+  ```
+
+### Building the Desktop App
+
+To build a production-ready executable:
+```bash
+npm run build:electron
+```
+The build output will be located in the `dist/` directory.
 
 All endpoints are prefixed with `/eris`:
 
