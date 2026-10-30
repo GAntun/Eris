@@ -1,6 +1,17 @@
-const mongoose = require('mongoose');
+import mongoose, { Document, Model } from 'mongoose';
 
-const channelSchema = new mongoose.Schema({
+export type ChannelType = 'text' | 'voice';
+
+export interface IChannel extends Document {
+    _id: mongoose.Types.ObjectId;
+    name: string;
+    description: string;
+    creator: string;
+    type: ChannelType;
+    createdAt: Date;
+}
+
+const channelSchema = new mongoose.Schema<IChannel>({
     name: {
         type: String,
         required: true,
@@ -31,4 +42,6 @@ const channelSchema = new mongoose.Schema({
     }
 });
 
-module.exports = mongoose.model('Channel', channelSchema);
+const Channel: Model<IChannel> = mongoose.model<IChannel>('Channel', channelSchema);
+
+export default Channel;

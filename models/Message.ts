@@ -1,6 +1,27 @@
-const mongoose = require('mongoose');
+import mongoose, { Document, Model } from 'mongoose';
+import type { OgPreview } from '../og';
+import type { YoutubeMeta } from '../youtube';
 
-const messageSchema = new mongoose.Schema({
+export interface ReplyTo {
+    _id: mongoose.Types.ObjectId;
+    username: string;
+    nickname: string;
+    text: string;
+}
+
+export interface IMessage extends Document {
+    _id: mongoose.Types.ObjectId;
+    channel: string;
+    username: string;
+    text: string;
+    og: OgPreview | null;
+    youtube: YoutubeMeta | null;
+    replyTo: ReplyTo | null;
+    pinned: boolean;
+    createdAt: Date;
+}
+
+const messageSchema = new mongoose.Schema<IMessage>({
     channel: {
         type: String,
         required: true,
@@ -40,4 +61,6 @@ const messageSchema = new mongoose.Schema({
     }
 });
 
-module.exports = mongoose.model('Message', messageSchema);
+const Message: Model<IMessage> = mongoose.model<IMessage>('Message', messageSchema);
+
+export default Message;

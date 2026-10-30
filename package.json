@@ -2,12 +2,17 @@
   "name": "eris",
   "version": "1.0.0",
   "description": "Eris chat application",
-  "main": "electron/main.js",
+  "main": "build/electron/main.js",
   "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node build/server.js",
+    "prestart": "npm run build",
+    "dev": "tsx watch server.ts",
     "build:css": "tailwindcss -i ./public/styles/input.css -o ./public/styles/output.css",
     "watch:css": "tailwindcss -i ./public/styles/input.css -o ./public/styles/output.css --watch",
-    "electron": "electron .",
-    "build:electron": "electron-builder"
+    "electron": "npm run build && electron .",
+    "build:electron": "npm run build && electron-builder"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -23,9 +28,15 @@
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/postcss": "^4.3.3",
+    "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
     "electron": "^44.4.1",
     "electron-builder": "^26.15.3",
-    "electron-is-dev": "^3.0.1"
+    "electron-is-dev": "^3.0.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   },
   "build": {
     "appId": "com.eris.app",
@@ -36,16 +47,18 @@
     "files": [
       "**/*",
       "!node_modules",
-      "!dist"
+      "!dist",
+      "!**/*.ts",
+      "!tsconfig.json"
     ],
     "extraResources": [
-      "server.js",
-      "db.js",
-      "og.js",
-      "youtube.js",
-      "models/*",
+      "build/server.js",
+      "build/db.js",
+      "build/og.js",
+      "build/youtube.js",
+      "build/models/*",
       "public/*",
-      "config.js"
+      "build/config.js"
     ]
   }
 }

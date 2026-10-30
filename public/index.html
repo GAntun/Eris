@@ -97,9 +97,19 @@
                     <span class="font-semibold text-sm">🎤 <span id="voice-channel-name">general</span></span>
                     <span id="voice-error" class="text-red-400 text-sm"></span>
                 </div>
+                <div id="screen-stage" class="hidden flex-col flex-grow min-h-0 bg-black">
+                    <div class="flex items-center justify-between px-4 py-1.5 bg-gray-800 text-white text-xs">
+                        <span id="screen-stage-name" class="font-semibold"></span>
+                        <span class="text-gray-400">is sharing their screen</span>
+                    </div>
+                    <div id="screen-view" class="flex-grow min-h-0 flex items-center justify-center overflow-hidden bg-black">
+                        <video id="screen-video" class="w-full h-full object-contain bg-black" autoplay playsinline muted></video>
+                    </div>
+                </div>
                 <div id="voice-users" class="flex flex-col gap-1 p-4 overflow-y-auto flex-grow"></div>
                 <div class="flex items-center justify-center gap-3 p-3 bg-gray-800">
                     <button id="voice-mute-btn" class="bg-gray-700 hover:bg-gray-600 rounded-md px-4 py-1.5 text-sm flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="2" y1="2" x2="22" y2="22"></line></svg> Mute</button>
+                    <button id="screen-share-btn" class="bg-gray-700 hover:bg-gray-600 rounded-md px-4 py-1.5 text-sm flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg> Share Screen</button>
                     <button id="voice-leave-btn" class="bg-red-500 hover:bg-red-600 rounded-md px-4 py-1.5 text-sm">Leave</button>
                 </div>
             </div>

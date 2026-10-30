@@ -1,6 +1,14 @@
-const mongoose = require('mongoose');
+import mongoose, { Document, Model } from 'mongoose';
 
-const sessionSchema = new mongoose.Schema({
+export interface ISession extends Document {
+    _id: mongoose.Types.ObjectId;
+    token: string;
+    username: string;
+    createdAt: Date;
+    expiresAt: Date;
+}
+
+const sessionSchema = new mongoose.Schema<ISession>({
     token: {
         type: String,
         required: true,
@@ -24,4 +32,6 @@ const sessionSchema = new mongoose.Schema({
 
 sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-module.exports = mongoose.model('Session', sessionSchema);
+const Session: Model<ISession> = mongoose.model<ISession>('Session', sessionSchema);
+
+export default Session;

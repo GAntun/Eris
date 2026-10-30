@@ -36,6 +36,10 @@ const authScreen = document.getElementById('auth-screen');
         const voiceError = document.getElementById('voice-error');
         const voiceMuteBtn = document.getElementById('voice-mute-btn');
         const voiceLeaveBtn = document.getElementById('voice-leave-btn');
+        const screenShareBtn = document.getElementById('screen-share-btn');
+        const screenStage = document.getElementById('screen-stage');
+        const screenStageName = document.getElementById('screen-stage-name');
+        const screenVideo = document.getElementById('screen-video');
         const settingsScreen = document.getElementById('settings-screen');
         const settingsClose = document.getElementById('settings-close');
         const settingsBtn = document.getElementById('settings-btn');
@@ -138,6 +142,13 @@ const authScreen = document.getElementById('auth-screen');
             speaking: new Set(),
             muted: false,
             byChannel: new Map()
+        };
+        let screenState = {
+            stream: null,
+            sharing: false,
+            sharers: [],
+            peers: new Map(),
+            viewer: null
         };
 
         const AVATAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
@@ -799,6 +810,8 @@ const authScreen = document.getElementById('auth-screen');
 
         async function enterVoiceChannel(name) {
             voiceUsers.innerHTML = '';
+            if (screenState.sharing) stopScreenShare(true);
+            closeAllScreenPeers();
             if (!voiceState.connected) {
                 await startVoice();
                 voiceState.connected = true;
@@ -836,6 +849,8 @@ const authScreen = document.getElementById('auth-screen');
             voiceState.connected = false;
             stopSpeakingMonitor();
             closeAllPeers();
+            if (screenState.sharing) stopScreenShare(true);
+            closeAllScreenPeers();
             if (voiceState.stream) {
                 voiceState.stream.getTracks().forEach((t) => t.stop());
                 voiceState.stream = null;
@@ -1067,9 +1082,246 @@ const authScreen = document.getElementById('auth-screen');
             });
             voiceState.participants = users;
             voiceState.connected = true;
+            if (screenState.sharing) {
+                const present = users.map((u) => u.username);
+                Array.from(screenState.peers.keys()).forEach((name) => {
+                    if (!present.includes(name)) closeScreenPeer(name);
+                });
+            }
             if (currentChannel) voiceState.byChannel.set(currentChannel, users);
             renderVoiceUsers();
             renderChannelList();
+        }
+
+        function getScreenStream() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                return Promise.reject(new Error('Screen sharing is not supported in this browser'));
+            }
+            const timeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('timed out waiting for screen selection')), 30000));
+            const stream = navigator.mediaDevices.getDisplayMedia({
+                video: { frameRate: { ideal: 15, max: 30 } },
+                audio: false
+            });
+            return Promise.race([stream, timeout]);
+        }
+
+        async function toggleScreenShare() {
+            if (screenState.sharing) {
+                stopScreenShare(true);
+                return;
+            }
+            if (!voiceState.connected) {
+                voiceError.textContent = 'Join a voice channel first';
+                return;
+            }
+            const others = screenState.sharers.filter((s) => s.username !== currentUsername);
+            if (others.length) {
+                voiceError.textContent = `${others[0].nickname} is already sharing`;
+                return;
+            }
+            let stream;
+            try {
+                stream = await getScreenStream();
+            } catch (err) {
+                voiceError.textContent = err.name === 'NotAllowedError' ? '' : err.message;
+                return;
+            }
+            voiceError.textContent = '';
+            screenState.stream = stream;
+            screenState.sharing = true;
+            stream.getVideoTracks().forEach((track) => {
+                track.onended = () => stopScreenShare(true);
+            });
+            screenVideo.muted = true;
+            screenVideo.srcObject = stream;
+            screenVideo.play().catch(() => {});
+            screenStageName.textContent = selfNickname || currentUsername;
+            screenStage.classList.remove('hidden');
+            voiceUsers.classList.add('hidden');
+            Array.from(screenState.peers.keys()).forEach((name) => addScreenTrack(name));
+            socket.emit('screen share start');
+            renderScreenShareButton();
+        }
+
+        function stopScreenShare(notify) {
+            if (screenState.stream) {
+                screenState.stream.getTracks().forEach((t) => t.stop());
+                screenState.stream = null;
+            }
+            screenState.sharing = false;
+            screenVideo.srcObject = null;
+            Array.from(screenState.peers.keys()).forEach((name) => {
+                const entry = screenState.peers.get(name);
+                if (entry) entry.pc.getSenders().forEach((s) => { if (s.track) entry.pc.removeTrack(s); });
+            });
+            if (notify && socket && socket.connected) socket.emit('screen share stop');
+            renderScreenShareButton();
+            if (screenState.sharers.filter((s) => s.username !== currentUsername).length === 0) {
+                hideScreenStage();
+            }
+        }
+
+        function getScreenPeer(username) {
+            const existing = screenState.peers.get(username);
+            if (existing) return existing;
+            const pc = new RTCPeerConnection(RTC_CONFIG);
+            const videoEl = document.createElement('video');
+            videoEl.autoplay = true;
+            videoEl.playsInline = true;
+            videoEl.muted = true;
+            pc.ontrack = (ev) => {
+                const stream = ev.streams[0] || new MediaStream([ev.track]);
+                if (screenState.viewer && screenState.viewer.username === username) {
+                    screenVideo.muted = true;
+                    screenVideo.srcObject = stream;
+                    screenVideo.play().catch(() => {});
+                } else {
+                    videoEl.srcObject = stream;
+                    videoEl.play().catch(() => {});
+                }
+            };
+            pc.onicecandidate = (ev) => {
+                if (!ev.candidate) return;
+                socket.emit('screen ice', { to: username, candidate: ev.candidate, channel: currentChannel });
+            };
+            const entry = { pc, videoEl };
+            screenState.peers.set(username, entry);
+            if (screenState.stream) addScreenTrack(username);
+            return entry;
+        }
+
+        function addScreenTrack(username) {
+            const entry = screenState.peers.get(username);
+            if (!entry || !screenState.stream) return;
+            const track = screenState.stream.getVideoTracks()[0];
+            if (track) entry.pc.addTrack(track, screenState.stream);
+        }
+
+        async function connectToScreenPeer(username) {
+            if (screenState.sharing) return;
+            const entry = getScreenPeer(username);
+            try {
+                entry.pc.addTransceiver('video', { direction: 'recvonly' });
+                const offer = await entry.pc.createOffer();
+                await entry.pc.setLocalDescription(offer);
+                socket.emit('screen offer', { to: username, sdp: entry.pc.localDescription, channel: currentChannel });
+            } catch (err) {
+                console.error('Screen offer failed for', username, err);
+            }
+        }
+
+        async function onScreenOffer(data) {
+            const { from, sdp, channel } = data;
+            if (channel !== currentChannel) return;
+            if (!screenState.sharing) return;
+            const entry = getScreenPeer(from);
+            try {
+                await entry.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+                const answer = await entry.pc.createAnswer();
+                await entry.pc.setLocalDescription(answer);
+                socket.emit('screen answer', { to: from, sdp: entry.pc.localDescription, channel });
+            } catch (err) {
+                console.error('Screen answer failed for', from, err);
+            }
+        }
+
+        async function onScreenAnswer(data) {
+            const { from, sdp, channel } = data;
+            if (channel !== currentChannel) return;
+            const entry = screenState.peers.get(from);
+            if (!entry || entry.pc.signalingState === 'stable') return;
+            try {
+                await entry.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+            } catch (err) {
+                console.error('Screen remote description failed for', from, err);
+            }
+        }
+
+        async function onScreenIce(data) {
+            const { from, candidate, channel } = data;
+            if (channel !== currentChannel) return;
+            const entry = screenState.peers.get(from);
+            if (!entry) return;
+            try {
+                await entry.pc.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (err) {
+                console.error('Screen ice candidate failed for', from, err);
+            }
+        }
+
+        function closeScreenPeer(username) {
+            const entry = screenState.peers.get(username);
+            if (!entry) return;
+            entry.pc.close();
+            if (entry.videoEl.srcObject) {
+                entry.videoEl.srcObject.getTracks().forEach((t) => t.stop());
+                entry.videoEl.srcObject = null;
+            }
+            screenState.peers.delete(username);
+            if (screenState.viewer && screenState.viewer.username === username) {
+                screenState.viewer = null;
+                if (!screenState.sharing) hideScreenStage();
+            }
+        }
+
+        function closeAllScreenPeers() {
+            Array.from(screenState.peers.keys()).forEach(closeScreenPeer);
+            screenState.sharers = [];
+            screenState.viewer = null;
+            hideScreenStage();
+        }
+
+        function hideScreenStage() {
+            screenStage.classList.add('hidden');
+            screenStageName.textContent = '';
+            screenVideo.srcObject = null;
+            if (!screenState.sharing) voiceUsers.classList.remove('hidden');
+        }
+
+        function showScreenStage(user) {
+            screenState.viewer = user;
+            screenStageName.textContent = user.nickname || user.username;
+            screenStage.classList.remove('hidden');
+            voiceUsers.classList.add('hidden');
+            const entry = screenState.peers.get(user.username);
+            if (entry && entry.videoEl.srcObject) {
+                screenVideo.muted = true;
+                screenVideo.srcObject = entry.videoEl.srcObject;
+                screenVideo.play().catch(() => {});
+            }
+        }
+
+        function renderScreenShareButton() {
+            if (!screenShareBtn) return;
+            screenShareBtn.classList.toggle('bg-red-500', screenState.sharing);
+            screenShareBtn.classList.toggle('hover:bg-red-600', screenState.sharing);
+            screenShareBtn.classList.toggle('bg-gray-700', !screenState.sharing);
+            screenShareBtn.classList.toggle('hover:bg-gray-600', !screenState.sharing);
+            screenShareBtn.lastChild.textContent = screenState.sharing ? ' Stop Sharing' : ' Share Screen';
+        }
+
+        function handleScreenState(data) {
+            if (!data || data.channel !== currentChannel) return;
+            const sharers = data.sharers || [];
+            const incoming = sharers.map((s) => s.username);
+            if (!screenState.sharing) {
+                Array.from(screenState.peers.keys()).forEach((name) => {
+                    if (!incoming.includes(name)) closeScreenPeer(name);
+                });
+                sharers.forEach((s) => {
+                    if (s.username === currentUsername) return;
+                    if (!screenState.peers.has(s.username)) connectToScreenPeer(s.username);
+                });
+            }
+            screenState.sharers = sharers;
+            const others = sharers.filter((s) => s.username !== currentUsername);
+            if (!screenState.sharing && others.length) {
+                showScreenStage(others[0]);
+            } else if (!others.length && !screenState.sharing) {
+                hideScreenStage();
+            }
+            renderScreenShareButton();
         }
 
         function buildEmojiPicker() {
@@ -1211,6 +1463,15 @@ const authScreen = document.getElementById('auth-screen');
             socket.on('voice offer', onVoiceOffer);
             socket.on('voice answer', onVoiceAnswer);
             socket.on('voice ice', onVoiceIce);
+
+            socket.on('screen share state', handleScreenState);
+            socket.on('screen share error', (message) => {
+                stopScreenShare(false);
+                voiceError.textContent = message;
+            });
+            socket.on('screen offer', onScreenOffer);
+            socket.on('screen answer', onScreenAnswer);
+            socket.on('screen ice', onScreenIce);
 
             socket.on('voice speaking', (data) => {
                 if (data.username === currentUsername) return;
@@ -1384,6 +1645,7 @@ const authScreen = document.getElementById('auth-screen');
         applyTheme();
 
         voiceMuteBtn.addEventListener('click', toggleMute);
+        screenShareBtn.addEventListener('click', toggleScreenShare);
 
         voiceLeaveBtn.addEventListener('click', () => {
             currentChannel = 'general';

@@ -17,4 +17,4 @@ jobs:
           # you don't need SSH! You just run local commands.
           docker-compose up -d --build 
           # OR
-          npm install && pm2 restart app
+          npm install && npm run build && pm2 restart app
